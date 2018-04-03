@@ -324,7 +324,7 @@ with train_graph.as_default():
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     
-    opt = tf.train.AdamOptimizer(1e-4).minimize(cost)
+    opt = tf.train.AdamOptimizer(1e-2).minimize(cost)
 
 
     # the driver
