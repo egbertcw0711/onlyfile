@@ -272,7 +272,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 
-batch_size = 128
+batch_size = 16
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -351,15 +351,16 @@ with tf.Session(graph=train_graph) as sess:
                 counter += 1
             
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
-            print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
-                  'Training loss: {:.3f}'.format(c))
+            # print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
+            #       'Training loss: {:.3f}'.format(c))
             los += c
             # sess.run(opt,feed_dict={x:train_color, y:train_mask, z:train_normal})
             num_batches += 1
             
-            # if num_batches % 10 == 0:
-            #     print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
-            #           'Training loss: {:.3f}'.format(c))
+            if num_batches % 10 == 0:
+                print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
+                      'Training loss: {:.3f}'.format(los))
+                los = 0
 
             if (num_batches) % 500 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
@@ -369,7 +370,7 @@ with tf.Session(graph=train_graph) as sess:
                 valid_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
                 valid_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
                 valid_normal = np.zeros(shape=(1000,128,128,3),dtype='float32')
-                cnt = 0
+                # cnt = 0
                 for k in test:
                     valid_color[0:,:,:] = readimage('./train/color', k)
                     valid_mask[0,:,:,0] = readmask('./train/mask', k)
