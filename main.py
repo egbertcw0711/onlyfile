@@ -337,6 +337,8 @@ with tf.Session(graph=train_graph) as sess:
         random.shuffle(data)
         train, test = train_test_split(data,data_size//20)
 #         print(train[:10])
+        loss = []
+        los = 0
         for batch_index in get_batches(train,batch_size):
 #             print("batches,",num_batches)
             counter = 0
@@ -349,19 +351,25 @@ with tf.Session(graph=train_graph) as sess:
                 counter += 1
             
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
-            print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
-                  'Training loss: {:.3f}'.format(c))
-#             sess.run(opt,feed_dict={x:train_color, y:train_mask, z:train_normal})
+            # print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
+            #       'Training loss: {:.3f}'.format(c))
+            los += c
+            # sess.run(opt,feed_dict={x:train_color, y:train_mask, z:train_normal})
             num_batches += 1
             
-            if (num_batches) % 5 == 0: 
+            if num_batches % 10 == 0:
+                print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
+                      'Training loss: {:.3f}'.format(c))
+
+            if (num_batches) % 500 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
                 print('visualize the cross validation set')
-                valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-                valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-                # valid_normal = np.zeros(shape=(1,128,128,3),dtype='float32')
+                valid_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+                valid_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+                valid_normal = np.zeros(shape=(1000,128,128,3),dtype='float32')
+                cnt = 0
                 for k in test:
                     valid_color[0:,:,:] = readimage('./train/color', k)
                     valid_mask[0,:,:,0] = readmask('./train/mask', k)
@@ -372,40 +380,29 @@ with tf.Session(graph=train_graph) as sess:
                     image.save('./train/pred/'+str(k)+'.png','png')
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
                 print(valid)
-                if valid < best_validation:
-                    best_validation = valid
-                    save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
-                    print("Best Model saved in path: %s" % save_path)
+                # if valid < best_validation:
+                #     best_validation = valid
+                #     save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
+                #     print("Best Model saved in path: %s" % save_path)
                     
             # cross validation: need large memo, does not work on my computer - Chen
-#             if num_batches % 100 == 0:
-#                 cnt = 0
-#                 for k in test:
-#                     validation_color[cnt,:,:,:] = readimage('./train/color', k)
-#                     validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
-#                     validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
-#                     validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
-#                     validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
-#                     cnt += 1
-#                 c = sess.run(cost, feed_dict={x:validation_color, y:validation_mask, z:validation_normal})
-#                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-#                   'Validation loss: {:.3f}'.format(c))
-#                 valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-#                 valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-#                 for k in test:
-#                     test_color[0:,:,:] = readimage('./train/color', k)
-#                     test_mask[0,:,:,0] = readmask('./train/mask', k)
-#                     test_mask[0,:,:,1] = readmask('./train/mask', k)
-#                     test_mask[0,:,:,2] = readmask('./train/mask', k)
-#                     result = sess.run(prediction, feed_dict = {x: valid_color, y:valid_mask})
-#                     image=Image.fromarray(result.astype(np.uint8)[0])
-#                     image.save('./train/pred/'+str(k)+'.png','png')
-#                 valid = evaluate('./train/pred/', './train/color/', './train/mask/')
-#                 print(valid)
-#                 if valid < best_validation:
-#                     best_validation = valid
-#                     save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
-#                     print("Best Model saved in path: %s" % save_path)
+            if num_batches % 100 == 0:
+                validatiom_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+                validation_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+                validation_normal = np.zeros(shape=(1000,128,128,3),dtype='float32')
+                cnt = 0
+                for k in test:
+                    validation_color[cnt,:,:,:] = readimage('./train/color', k)
+                    validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
+                    validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
+                    validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
+                    validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
+                    cnt += 1
+                c = sess.run(cost, feed_dict={x:validation_color, y:validation_mask, z:validation_normal})
+                print('Cross Validation Result: ')
+                print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
+                  'Validation loss: {:.3f}'.format(c))
+
     num_test = len(glob.glob('./test/color/*.png'))
     test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
     test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
