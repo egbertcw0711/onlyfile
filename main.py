@@ -271,14 +271,14 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
 data_size = 20000
 epochs = 2
 data = [i for i in range(data_size)]
-batch_size = 4
+batch_size = 64
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 
-validation_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-validation_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-validation_normal = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+# validation_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+# validation_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
+# validation_normal = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
 
 
 # build the graph
@@ -290,12 +290,12 @@ with train_graph.as_default():
 
     convH_2 = buildModel(x)
     
-    prediction = convH_2/255.0
-    norm = z/255.0
+    prediction = tf.multiply(tf.substract(tf.divide(convH_2,255.0),0.5),2)
+    norm = tf.multiply(tf.substract(tf.divide(z,255.0),0.5),2)
     cost = 0
 
-    prediction *= y
-    norm *= y
+    prediction = tf.multiply(prediction,y)
+    norm = tf.multiply(norm,y)
 
     for k in range(batch_size):
         cost += -tf.reduce_sum(tf.multiply(prediction,norm))/(128**2)
@@ -323,7 +323,7 @@ with train_graph.as_default():
     #     mean_angle_error += tf.reduce_sum(angle_error)
 
     # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
-    cost /= batch_size
+    cost = tf.divide(cost,batch_size)
 
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
@@ -377,7 +377,10 @@ with tf.Session(graph=train_graph) as sess:
         valid_mask[0,:,:,1] = readmask('./train/mask', k)
         valid_mask[0,:,:,2] = readmask('./train/mask', k)
         result = sess.run(convH_2, feed_dict = {x: valid_color, y:valid_mask})
-        image=Image.fromarray(result.astype(np.uint8)[0])
+        maxVal = tf.reduce_max(result)
+        minVal = tf.reduce_min(result)
+        rescaled = (255.0/maxVal*(result-minVal)).astype(np.uint8)
+        image=Image.fromarray(rescaled[0])
         image.save('./train/pred/'+str(k)+'.png','png')
         if cnt % 200 == 0:
             print(cnt)
@@ -408,15 +411,15 @@ with tf.Session(graph=train_graph) as sess:
             #       'Validation loss: {:.3f}'.format(c))
             # num_batches += 1
 
-    num_test = len(glob.glob('./test/color/*.png'))
-    test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    for k in range(num_test):
-        # print(k)
-        test_color[0,:,:,:] = readimage('./test/color', k)
-        test_mask[0,:,:,0] = readmask('./test/mask', k)
-        test_mask[0,:,:,1] = readmask('./test/mask', k)
-        test_mask[0,:,:,2] = readmask('./test/mask', k)
-        result = sess.run(prediction, feed_dict = {x:test_color,y:test_mask})
-        image=Image.fromarray(result.astype(np.uint8)[0])
-        image.save('./test/normal/'+str(k)+'.png','png')
+    # num_test = len(glob.glob('./test/color/*.png'))
+    # test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # for k in range(num_test):
+    #     # print(k)
+    #     test_color[0,:,:,:] = readimage('./test/color', k)
+    #     test_mask[0,:,:,0] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,1] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,2] = readmask('./test/mask', k)
+    #     result = sess.run(prediction, feed_dict = {x:test_color,y:test_mask})
+    #     image=Image.fromarray(result.astype(np.uint8)[0])
+    #     image.save('./test/normal/'+str(k)+'.png','png')
