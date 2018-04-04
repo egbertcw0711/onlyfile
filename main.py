@@ -347,28 +347,28 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
 
-            if num_batches % 500 == 0: 
+        if epochs % 2 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
-                print('visualize the cross validation set')
-                valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-                valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-                # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
-                cnt = 1
-                for k in test:
-                    valid_color[0:,:,:] = readimage('./train/color', k)
-                    valid_mask[0,:,:,0] = readmask('./train/mask', k)
-                    valid_mask[0,:,:,1] = readmask('./train/mask', k)
-                    valid_mask[0,:,:,2] = readmask('./train/mask', k)
-                    result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
-                    image=Image.fromarray(result.astype(np.uint8)[0])
-                    image.save('./train/pred/'+str(k)+'.png','png')
-                    if cnt % 200 == 0:
-                        print(cnt)
-                    cnt += 1
-                valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-                print(valid)
+            print('visualize the cross validation set, epochs'.format(epochs))
+            valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+            valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+            # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
+            cnt = 1
+            for k in test:
+                valid_color[0:,:,:] = readimage('./train/color', k)
+                valid_mask[0,:,:,0] = readmask('./train/mask', k)
+                valid_mask[0,:,:,1] = readmask('./train/mask', k)
+                valid_mask[0,:,:,2] = readmask('./train/mask', k)
+                result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
+                image=Image.fromarray(result.astype(np.uint8)[0])
+                image.save('./train/pred/'+str(k)+'.png','png')
+                if cnt % 200 == 0:
+                    print(cnt)
+                cnt += 1
+            valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+            print(valid)
                 # if valid < best_validation:
                 #     best_validation = valid
                 #     save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
@@ -397,7 +397,7 @@ with tf.Session(graph=train_graph) as sess:
     test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
     test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
     for k in range(num_test):
-        print(k)
+        # print(k)
         test_color[0,:,:,:] = readimage('./test/color', k)
         test_mask[0,:,:,0] = readmask('./test/mask', k)
         test_mask[0,:,:,1] = readmask('./test/mask', k)
