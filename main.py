@@ -286,8 +286,8 @@ with train_graph.as_default():
 
     # for k in range(batch_size):
         # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
-    # mean_angle_error = 0
-    # total_pixels = 0
+    mean_angle_error = 0
+    total_pixels = 0
     
     for j in range(batch_size):        
         # prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
