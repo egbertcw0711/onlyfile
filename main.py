@@ -290,8 +290,8 @@ with train_graph.as_default():
 
     convH_2 = buildModel(x)
     
-    prediction = tf.multiply(tf.substract(tf.divide(convH_2,255.0),0.5),2)
-    norm = tf.multiply(tf.substract(tf.divide(z,255.0),0.5),2)
+    prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
+    norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
 
     prediction = tf.multiply(prediction,y)
