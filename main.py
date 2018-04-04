@@ -324,11 +324,10 @@ with train_graph.as_default():
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     
-    opt = tf.train.AdamOptimizer(1e-2).minimize(cost)
+    opt = tf.train.AdamOptimizer(1e-3).minimize(cost)
 
 
-    # the driver
-# import random
+# the driver
 
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
@@ -362,14 +361,14 @@ with tf.Session(graph=train_graph) as sess:
                       'Training loss: {:.3f}'.format(los))
                 los = 0
 
-            if (num_batches) % 500 == 0: 
+            if num_batches % 100 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
                 print('visualize the cross validation set')
-                valid_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-                valid_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-                valid_normal = np.zeros(shape=(1000,128,128,3),dtype='float32')
+                valid_color = np.zeros(shape = (0,128,128,3), dtype = 'float32')
+                valid_mask = np.zeros(shape = (0,128,128,3), dtype = 'float32')
+                # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
                 # cnt = 0
                 for k in test:
                     valid_color[0:,:,:] = readimage('./train/color', k)
