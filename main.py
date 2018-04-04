@@ -283,16 +283,16 @@ with train_graph.as_default():
     # prediction = tf.multiply(tf.subtract(tf.divide(output,255.0),0.5),2)
     # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
-
-    prediction = tf.multiply(prediction,y)
-    norm = tf.multiply(norm,y)
+    norm = z
+    #prediction = tf.multiply(prediction,y)
+    #norm = tf.multiply(norm,y)
 
     # for k in range(batch_size):
         # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
     mean_angle_error = 0
     total_pixels = 0
-    prediction = prediction/255
-    prediction = predictoin *mask
+    prediction = output/255
+    prediction = prediction *mask
     norm = norm/255
     norm = norm*mask
     for k in range(batch_size): 
