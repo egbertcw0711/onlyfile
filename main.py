@@ -169,7 +169,6 @@ def buildModel(x):
     ###
     ##
     convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
-    # convE_11 = convF_3
     convG = hourglass(convE_11,256,128,32,1,3,5,7)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
@@ -279,7 +278,30 @@ with train_graph.as_default():
     y = tf.placeholder('float32',[None, 128,128,3]) # mask
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
-    output = buildModel(x)
+    # output = buildModel(x)
+    w1 = weight_variable([3,3,3,32])
+    b1 = bias_variable([32])
+    conv1 = tf.nn.relu(conv2d(x, w1) + b1)
+
+    w2 = weight_variable([3,3,32,64])
+    b2 = bias_variable([64])
+    conv2 = tf.nn.relu(conv2d(conv1, w2) + b2)
+
+    w3 = weight_variable([3,3,64,128])
+    b3 = bias_variable([128])
+    conv3 = tf.nn.relu(conv2d(conv2, w3) + b3)
+
+    w4 = weight_variable([3,3,128,64])
+    b4 = bias_variable([64])
+    conv4 = tf.nn.relu(conv2d(conv3, w4) + b4)
+
+    w5 = weight_variable([3,3,64,32])
+    b5 = bias_variable([32])
+    conv5 = tf.nn.relu(conv2d(conv4, w5) + b5)
+
+    w6 = weight_variable([3,3,32,3])
+    b6 = bias_variable([3])
+    output = tf.nn.relu(conv2d(conv5, w6) + b6)
     # prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
     # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
