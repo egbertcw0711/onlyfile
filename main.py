@@ -92,69 +92,74 @@ def hourglass(inputs, in_dim, out_dim, inter_dim, conv1_size, conv2_size, conv3_
     conv4 = tf.nn.relu(conv2d(conv04,w4) + b4)
     
     res = tf.concat([conv1, conv2, conv3, conv4], axis=3)
-    res.shape
+    # print(res.shape)
     
     return res
 
 
 def buildModel(x):
     """
-    build the hourglass net model
-    x: inputs
+    build the stacked hourglass net model
+    x: inputs 128 x 128 x 3
     return: outputs of the model 128 x 128 x 3
     """
     wh0 = weight_variable([3,3,3,128])
     bh0 = bias_variable([128])
     convH = tf.nn.relu(conv2d(x, wh0) + bh0)
-    #print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
+    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
     #
     convA = hourglass(convH,128,64,64,1,3,7,11)
-    #print(convA.shape) # 128 x 128 x 64
+    # print(convA.shape) # 128 x 128 x 64
     [dummybatch,height4,width4,depth4] = convA.shape
     #
     #
-    convB_1 = hourglass(convH,128,128,32,1,3,5,7)
+    convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'VALID')
+    convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7)
     convB_2 = hourglass(convB_1,128,128,32,1,3,5,7)
+    # print(convB_2.shape) # 64 x 64 x 128
     #
     ##
     convB_3 = hourglass(convB_2,128,128,32,1,3,5,7)
     convC = hourglass(convB_3,128,128,64,1,3,7,11)
-    #print(convC.shape) # 128 x 128 x 128
+    # print(convC.shape) # 64 x 64 x 128
     [dummybatch,height3,width3,depth3] = convC.shape
     ##
     ##
-    convB_maxpool = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_4 = hourglass(convB_maxpool,128,128,32,1,3,5,7)
+    convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'VALID')
+    convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7)
     convD = hourglass(convB_4,128,256,32,1,3,5,7)
+    # print(convD.shape) # 32 x 32 x 256
     ##
     ###
     convE = hourglass(convD,256,256,32,1,3,5,7) 
     convF = hourglass(convE,256,256,64,1,3,7,11)
-    #print(convF.shape) # 64 x 64 x 256
+    # print(convF.shape) # 32 x 32 x 256
     [dummybatch,height2,width2,depth2] = convF.shape
     ###
     ###
-    convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='SAME')
+    convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='VALID')
     convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7)
     convE_3 = hourglass(convE_2,256,256,32,1,3,5,7)
+    # print(convE_3.shape) # 16 x 16 x 256
     ###
     ####
     convE_4 = hourglass(convE_3,256,256,32,1,3,5,7)
     convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
+    # print(convE_5.shape) # 16 x 16 x 256
     #print(convE_5.shape)
     [dummybatch,height,width,depth] = convE_5.shape
     ####
     ####
-    convE_3_maxpool = tf.nn.max_pool(convE_3,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
+    convE_3_maxpool = tf.nn.max_pool(convE_3,ksize=[1,2,2,1],strides=[1,2,2,1],padding='VALID')
     convE_6 = hourglass(convE_3_maxpool,256,256,32,1,3,5,7)
     convE_7 = hourglass(convE_6,256,256,32,1,3,5,7)
     convE_8 = hourglass(convE_7,256,256,32,1,3,5,7)
-    #print(convE_8.shape)
+    # print(convE_8.shape) # 8 x 8 x 256
     ####
     ####
     upsample_4 = tf.image.resize_nearest_neighbor(convE_8,[height,width])
     convE_9 = tf.add(upsample_4,convE_5)
-    #print(convE_9.shape)
+    # print(convE_9.shape) # 16 x 16 x 256
     ####
     ###
     convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
@@ -275,8 +280,8 @@ with train_graph.as_default():
     y = tf.placeholder('float32',[None, 128,128,3]) # mask
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
-    convH_2 = buildModel(x)
-    
+    output = buildModel(x)
+
     # prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
     # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
@@ -290,26 +295,25 @@ with train_graph.as_default():
     total_pixels = 0
     
     for j in range(batch_size):        
-        prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
-        groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
+        prediction = ((output[j,:,:,:] / 255.0) - 0.5) * 2
+        norm = ((z[j,:,:,:] / 255.0) - 0.5) * 2
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
-        total_pixels += tf.count_nonzero(y[j,:,:,0])
-        #tf.assign(bmask,tf.not_equal(bmask,0))
+        total_pixels += tf.count_nonzero(bmask)
+        # tf.assign(bmask,tf.not_equal(bmask,0))
         
         a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
-        a22 = tf.boolean_mask(tf.reduce_sum(norm * norm, axis=2),bmask)
-        a12 = tf.boolean_mask(tf.reduce_sum(prediction * norm, axis=2),bmask)
+        a22 = tf.boolean_mask(tf.reduce_sum(norm*norm, axis=2),bmask)
+        a12 = tf.boolean_mask(tf.reduce_sum(prediction*norm, axis=2),bmask)
 
         cos_dist = a12 / tf.sqrt(a11 * a22)
-        #tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
+        # tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
         cos_dist = tf.clip_by_value(cos_dist, -1, 1)
         angle_error = tf.acos(cos_dist)
         mean_angle_error += tf.reduce_sum(angle_error)
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
-    cost = tf.divide(cost,batch_size)
 
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
@@ -352,7 +356,7 @@ with tf.Session(graph=train_graph) as sess:
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
-    print('visualize the cross validation set, epochs'.format(epochs))
+    print('generate the picture')
     valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
     valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
     # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
