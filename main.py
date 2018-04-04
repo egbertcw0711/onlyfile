@@ -298,7 +298,8 @@ with train_graph.as_default():
     norm *= y
 
     for k in range(batch_size):
-        cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
+        cost += -tf.reduce_sum(tf.multiply(prediction,norm))/(128**2)
+        # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
     # mean_angle_error = 0
     # total_pixels = 0
     
