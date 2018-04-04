@@ -280,19 +280,22 @@ with train_graph.as_default():
 
     output = buildModel(x)
 
-    # prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
+    # prediction = tf.multiply(tf.subtract(tf.divide(output,255.0),0.5),2)
     # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
 
-    # prediction = tf.multiply(prediction,y)
-    # norm = tf.multiply(norm,y)
+    prediction = tf.multiply(prediction,y)
+    norm = tf.multiply(norm,y)
 
     # for k in range(batch_size):
         # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
     mean_angle_error = 0
     total_pixels = 0
-    
-    for j in range(batch_size): 
+    prediction = prediction/255
+    prediction = predictoin *mask
+    norm = norm/255
+    norm = norm*mask
+    for k in range(batch_size): 
         cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])       
     #     prediction = ((output[j,:,:,:]*1.0/255.0) - 0.5) * 2
     #     norm = ((z[j,:,:,:]*1.0/255.0) - 0.5) * 2
