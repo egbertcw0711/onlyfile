@@ -339,7 +339,6 @@ with tf.Session(graph=train_graph) as sess:
         loss = []
         los = 0
         for batch_index in get_batches(train,batch_size):
-#             print("batches,",num_batches)
             counter = 0
             for i in batch_index:
                 train_color[counter,:,:,:] = readimage('./train/color', i)
@@ -358,7 +357,7 @@ with tf.Session(graph=train_graph) as sess:
             
             if num_batches % 10 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
-                      'Training loss: {:.3f}'.format(los))
+                      'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
 
             if num_batches % 100 == 0: 
@@ -366,8 +365,8 @@ with tf.Session(graph=train_graph) as sess:
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
                 print('visualize the cross validation set')
-                valid_color = np.zeros(shape = (0,128,128,3), dtype = 'float32')
-                valid_mask = np.zeros(shape = (0,128,128,3), dtype = 'float32')
+                valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
                 # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
                 # cnt = 0
                 for k in test:
