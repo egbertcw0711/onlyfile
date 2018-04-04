@@ -196,9 +196,9 @@ def get_batches(random_indexes, batch_size):
 
 
 
-data_size = 20000
-epochs = 3
-data = [i for i in range(data_size)]
+# data_size = 20000
+# epochs = 3
+# data = [i for i in range(data_size)]
 
 # Save the best validation model
 # saver = tf.train.Saver()
@@ -268,7 +268,9 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
 
     return mean_angle_error / total_pixels
 
-
+data_size = 20000
+epochs = 4
+data = [i for i in range(data_size)]
 batch_size = 32
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -288,30 +290,40 @@ with train_graph.as_default():
 
     convH_2 = buildModel(x)
     
-    mean_angle_error = 0
-    total_pixels = 0
-    
-    for j in range(batch_size):        
-        prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
-        groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
-        mask = y[j,:,:,0]
-        bmask = tf.cast(mask,tf.bool)
+    prediction = convH_2/255.0
+    norm = z/255.0
+    cost = 0
 
-        total_pixels += tf.count_nonzero(y[j,:,:,0])
-        #   bmask = bmask != 0
+    prediction *= y
+    norm *= y
+
+    for k in range(batch_size):
+        cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
+    # mean_angle_error = 0
+    # total_pixels = 0
+    
+    # for j in range(batch_size):        
+    #     prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
+    #     groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
+    #     mask = y[j,:,:,0]
+    #     bmask = tf.cast(mask,tf.bool)
+
+    #     total_pixels += tf.count_nonzero(y[j,:,:,0])
+    #     #   bmask = bmask != 0
         
-        a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
-        a22 = tf.boolean_mask(tf.reduce_sum(groundtruth * groundtruth, axis=2),bmask)
-        a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),bmask)
+    #     a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
+    #     a22 = tf.boolean_mask(tf.reduce_sum(groundtruth * groundtruth, axis=2),bmask)
+    #     a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),bmask)
 
-        cos_dist = a12 / tf.sqrt(a11 * a22)
-        # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
-        cos_dist = tf.clip_by_value(cos_dist, -1, 1)
-        angle_error = tf.acos(cos_dist)
-        mean_angle_error += tf.reduce_sum(angle_error)
+    #     cos_dist = a12 / tf.sqrt(a11 * a22)
+    #     # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
+    #     cos_dist = tf.clip_by_value(cos_dist, -1, 1)
+    #     angle_error = tf.acos(cos_dist)
+    #     mean_angle_error += tf.reduce_sum(angle_error)
 
-    cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
-    
+    # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
+    cost /= batch_size
+
     opt = tf.train.AdamOptimizer(1e-3).minimize(cost)
 
 
@@ -343,9 +355,10 @@ with tf.Session(graph=train_graph) as sess:
             # num_batches += 1
             
             if num_batches % 10 == 0:
-                print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
+                print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
+            num_batches += 1
 
         if epochs % 2 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
@@ -391,7 +404,7 @@ with tf.Session(graph=train_graph) as sess:
             #     print('Cross Validation Result: ')
             #     print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
             #       'Validation loss: {:.3f}'.format(c))
-            num_batches += 1
+            # num_batches += 1
 
     num_test = len(glob.glob('./test/color/*.png'))
     test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
