@@ -12,17 +12,17 @@ import scipy
 def readimage(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image*1.0/255.0
+    return image/255.0
 
 def readmask(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image*1.0/255.0
+    return image/255.0
 
 def readnormal(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image*1.0/255.0
+    return image/255.0
 
     # import tensorflow as tf
 
@@ -257,7 +257,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         a12 = np.sum(prediction * groundtruth, axis=2)[mask]
 
         cos_dist = a12 / np.sqrt(a11 * a22)
-        cos_dist[np.isnan(cos_dist)] = -1
+        # cos_dist[np.isnan(cos_dist)] = -1
         cos_dist = np.clip(cos_dist, -1, 1)
 
         angle_error = np.arccos(cos_dist)
@@ -281,7 +281,6 @@ with train_graph.as_default():
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
     output = buildModel(x)
-
     # prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
     # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
@@ -295,8 +294,8 @@ with train_graph.as_default():
     total_pixels = 0
     
     for j in range(batch_size):        
-        prediction = ((output[j,:,:,:]) - 0.5) * 2
-        norm = ((z[j,:,:,:]) - 0.5) * 2
+        prediction = ((output[j,:,:,:]*1.0/255.0) - 0.5) * 2
+        norm = ((z[j,:,:,:]*1.0/255.0) - 0.5) * 2
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -310,8 +309,8 @@ with train_graph.as_default():
         cos_dist = a12 / tf.sqrt(a11 * a22)
         # tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
         cos_dist = tf.clip_by_value(cos_dist, -1, 1)
-        # angle_error = tf.acos(cos_dist)
-        angle_error = cos_dist
+        angle_error = tf.acos(cos_dist)
+        # angle_error = cos_dist
         mean_angle_error += tf.reduce_sum(angle_error)
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
