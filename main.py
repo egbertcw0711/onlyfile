@@ -7,7 +7,7 @@ import random
 from PIL import Image
 import glob
 import random
-
+import scipy
 
 def readimage(folder, index):
     path = os.path.join(folder, str(index)+'.png')
@@ -263,7 +263,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
 data_size = 20000
 epochs = 2
 data = [i for i in range(data_size)]
-batch_size = 64
+batch_size = 16
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -277,12 +277,12 @@ with train_graph.as_default():
 
     convH_2 = buildModel(x)
     
-    prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
-    norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
+    # prediction = tf.multiply(tf.subtract(tf.divide(convH_2,255.0),0.5),2)
+    # norm = tf.multiply(tf.subtract(tf.divide(z,255.0),0.5),2)
     cost = 0
 
-    prediction = tf.multiply(prediction,y)
-    norm = tf.multiply(norm,y)
+    # prediction = tf.multiply(prediction,y)
+    # norm = tf.multiply(norm,y)
 
     # for k in range(batch_size):
         # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
@@ -290,23 +290,23 @@ with train_graph.as_default():
     total_pixels = 0
     
     for j in range(batch_size):        
-        # prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
-        # groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
+        prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
+        groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
         total_pixels += tf.count_nonzero(y[j,:,:,0])
-        #   bmask = bmask != 0
+        #tf.assign(bmask,tf.not_equal(bmask,0))
         
         a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
         a22 = tf.boolean_mask(tf.reduce_sum(norm * norm, axis=2),bmask)
-        a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),bmask)
+        a12 = tf.boolean_mask(tf.reduce_sum(prediction * norm, axis=2),bmask)
 
         cos_dist = a12 / tf.sqrt(a11 * a22)
-        # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
+        #tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
         cos_dist = tf.clip_by_value(cos_dist, -1, 1)
         angle_error = tf.acos(cos_dist)
-        mean_angle_error += -tf.reduce_sum(angle_error)
+        mean_angle_error += tf.reduce_sum(angle_error)
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     cost = tf.divide(cost,batch_size)
@@ -363,11 +363,15 @@ with tf.Session(graph=train_graph) as sess:
         valid_mask[0,:,:,1] = readmask('./train/mask', k)
         valid_mask[0,:,:,2] = readmask('./train/mask', k)
         result = sess.run(convH_2, feed_dict = {x: valid_color, y:valid_mask})
-        maxVal = tf.reduce_max(result)
-        minVal = tf.reduce_min(result)
-        rescaled = (255.0/maxVal*(result-minVal)).astype(np.uint8)
-        image=Image.fromarray(rescaled[0])
-        image.save('./train/pred/'+str(k)+'.png','png')
+        # maxVal = np.max(result)
+        # minVal = np.max(result)
+        # # result.astype
+        # rescaled = (255.0/maxVal*(np.minus(result,minVal))).astype(np.uint8)
+        # image=Image.fromarray(rescaled[0])
+        imgio = np.reshape(result,[128,128,3])
+        pth = './train/pred/'+str(k)+'.png'
+        scipy.misc.imsave(pth,imgio)
+        # image.save('./train/pred/'+str(k)+'.png','png')
         if cnt % 200 == 0:
             print(cnt)
         cnt += 1
@@ -407,5 +411,5 @@ with tf.Session(graph=train_graph) as sess:
     #     test_mask[0,:,:,1] = readmask('./test/mask', k)
     #     test_mask[0,:,:,2] = readmask('./test/mask', k)
     #     result = sess.run(prediction, feed_dict = {x:test_color,y:test_mask})
-    #     image=Image.fromarray(result.astype(np.uint8)[0])
+        image=Image.fromarray(result.astype(np.uint8)[0])
     #     image.save('./test/normal/'+str(k)+'.png','png')
