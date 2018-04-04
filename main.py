@@ -293,14 +293,14 @@ with train_graph.as_default():
         # prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
         # groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
         mask = y[j,:,:,0]
-        # bmask = tf.cast(mask,tf.bool)
+        bmask = tf.cast(mask,tf.bool)
 
         total_pixels += tf.count_nonzero(y[j,:,:,0])
         #   bmask = bmask != 0
         
-        a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),mask)
-        a22 = tf.boolean_mask(tf.reduce_sum(norm * norm, axis=2),mask)
-        a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),mask)
+        a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
+        a22 = tf.boolean_mask(tf.reduce_sum(norm * norm, axis=2),bmask)
+        a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),bmask)
 
         cos_dist = a12 / tf.sqrt(a11 * a22)
         # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
