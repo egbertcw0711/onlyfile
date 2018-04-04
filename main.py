@@ -261,7 +261,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 data_size = 20000
-epochs = 2
+epochs = 1
 data = [i for i in range(data_size)]
 batch_size = 16
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -411,5 +411,5 @@ with tf.Session(graph=train_graph) as sess:
     #     test_mask[0,:,:,1] = readmask('./test/mask', k)
     #     test_mask[0,:,:,2] = readmask('./test/mask', k)
     #     result = sess.run(prediction, feed_dict = {x:test_color,y:test_mask})
-        image=Image.fromarray(result.astype(np.uint8)[0])
+    #    image=Image.fromarray(result.astype(np.uint8)[0])
     #     image.save('./test/normal/'+str(k)+'.png','png')
