@@ -330,6 +330,7 @@ with tf.Session(graph=train_graph) as sess:
         # train, test = train_test_split(data,data_size//20)
         # loss = []
         los = 0
+        # prev = float('inf')
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -356,31 +357,32 @@ with tf.Session(graph=train_graph) as sess:
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
-    print('generate the picture')
-    valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
-    cnt = 1
-    for k in test:
-        valid_color[0:,:,:] = readimage('./train/color', k)
-        valid_mask[0,:,:,0] = readmask('./train/mask', k)
-        valid_mask[0,:,:,1] = readmask('./train/mask', k)
-        valid_mask[0,:,:,2] = readmask('./train/mask', k)
-        result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
-        # maxVal = np.max(result)
-        # minVal = np.max(result)
-        # # result.astype
-        # rescaled = (255.0/maxVal*(np.minus(result,minVal))).astype(np.uint8)
-        # image=Image.fromarray(rescaled[0])
-        imgio = np.reshape(result,[128,128,3])
-        pth = './train/pred/'+str(k)+'.png'
-        scipy.misc.imsave(pth,imgio)
-        # image.save('./train/pred/'+str(k)+'.png','png')
-        if cnt % 200 == 0:
-            print(cnt)
-        cnt += 1
-    valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-    print(valid)
+            if num_batches % 100 == 0:
+                print('generate the picture')
+                valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
+                cnt = 1
+                for k in test:
+                    valid_color[0:,:,:] = readimage('./train/color', k)
+                    valid_mask[0,:,:,0] = readmask('./train/mask', k)
+                    valid_mask[0,:,:,1] = readmask('./train/mask', k)
+                    valid_mask[0,:,:,2] = readmask('./train/mask', k)
+                    result = sess.run(output/255.0, feed_dict = {x: valid_color, y:valid_mask})
+                    # maxVal = np.max(result)
+                    # minVal = np.max(result)
+                    # # result.astype
+                    # rescaled = (255.0/maxVal*(np.minus(result,minVal))).astype(np.uint8)
+                    # image=Image.fromarray(rescaled[0])
+                    imgio = np.reshape(result,[128,128,3])
+                    pth = './train/pred/'+str(k)+'.png'
+                    scipy.misc.imsave(pth,imgio)
+                    # image.save('./train/pred/'+str(k)+'.png','png')
+                    if cnt % 200 == 0:
+                        print(cnt)
+                    cnt += 1
+                valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+                print(valid)
                 # if valid < best_validation:
                 #     best_validation = valid
                 #     save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
