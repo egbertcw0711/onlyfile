@@ -269,9 +269,9 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 data_size = 20000
-epochs = 4
+epochs = 2
 data = [i for i in range(data_size)]
-batch_size = 32
+batch_size = 4
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -324,17 +324,19 @@ with train_graph.as_default():
     # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     cost /= batch_size
 
-    opt = tf.train.AdamOptimizer(1e-3).minimize(cost)
+    opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
 
 # the driver
+random.shuffle(data)
+train, test = train_test_split(data,data_size//20)
 
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
     for e in range(1,epochs+1):
         num_batches = 0
-        random.shuffle(data)
-        train, test = train_test_split(data,data_size//20)
+        # random.shuffle(data)
+        # train, test = train_test_split(data,data_size//20)
         # loss = []
         los = 0
         for batch_index in get_batches(train,batch_size):
@@ -353,35 +355,34 @@ with tf.Session(graph=train_graph) as sess:
             los += c
             # sess.run(opt,feed_dict={x:train_color, y:train_mask, z:train_normal})
             # num_batches += 1
-            
+            num_batches += 1
             if num_batches % 10 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
-            num_batches += 1
 
-        if epochs % 2 == 0: 
+    # if epochs  == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
-            print('visualize the cross validation set, epochs'.format(epochs))
-            valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
-            cnt = 1
-            for k in test:
-                valid_color[0:,:,:] = readimage('./train/color', k)
-                valid_mask[0,:,:,0] = readmask('./train/mask', k)
-                valid_mask[0,:,:,1] = readmask('./train/mask', k)
-                valid_mask[0,:,:,2] = readmask('./train/mask', k)
-                result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
-                image=Image.fromarray(result.astype(np.uint8)[0])
-                image.save('./train/pred/'+str(k)+'.png','png')
-                if cnt % 200 == 0:
-                    print(cnt)
-                cnt += 1
-            valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-            print(valid)
+    print('visualize the cross validation set, epochs'.format(epochs))
+    valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
+    cnt = 1
+    for k in test:
+        valid_color[0:,:,:] = readimage('./train/color', k)
+        valid_mask[0,:,:,0] = readmask('./train/mask', k)
+        valid_mask[0,:,:,1] = readmask('./train/mask', k)
+        valid_mask[0,:,:,2] = readmask('./train/mask', k)
+        result = sess.run(convH_2, feed_dict = {x: valid_color, y:valid_mask})
+        image=Image.fromarray(result.astype(np.uint8)[0])
+        image.save('./train/pred/'+str(k)+'.png','png')
+        if cnt % 200 == 0:
+            print(cnt)
+        cnt += 1
+    valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+    print(valid)
                 # if valid < best_validation:
                 #     best_validation = valid
                 #     save_path = saver.save(sess, 'checkpoints/best_validation.ckpt')
