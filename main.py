@@ -12,17 +12,17 @@ import scipy
 def readimage(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image
+    return image*1.0/255.0
 
 def readmask(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image
+    return image*1.0/255.0
 
 def readnormal(folder, index):
     path = os.path.join(folder, str(index)+'.png')
     image = imageio.imread(path)
-    return image
+    return image*1.0/255.0
 
     # import tensorflow as tf
 
@@ -295,8 +295,8 @@ with train_graph.as_default():
     total_pixels = 0
     
     for j in range(batch_size):        
-        prediction = ((output[j,:,:,:] / 255.0) - 0.5) * 2
-        norm = ((z[j,:,:,:] / 255.0) - 0.5) * 2
+        prediction = ((output[j,:,:,:]) - 0.5) * 2
+        norm = ((z[j,:,:,:]) - 0.5) * 2
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -310,7 +310,8 @@ with train_graph.as_default():
         cos_dist = a12 / tf.sqrt(a11 * a22)
         # tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
         cos_dist = tf.clip_by_value(cos_dist, -1, 1)
-        angle_error = tf.acos(cos_dist)
+        # angle_error = tf.acos(cos_dist)
+        angle_error = cos_dist
         mean_angle_error += tf.reduce_sum(angle_error)
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
@@ -366,7 +367,7 @@ with tf.Session(graph=train_graph) as sess:
         valid_mask[0,:,:,0] = readmask('./train/mask', k)
         valid_mask[0,:,:,1] = readmask('./train/mask', k)
         valid_mask[0,:,:,2] = readmask('./train/mask', k)
-        result = sess.run(convH_2, feed_dict = {x: valid_color, y:valid_mask})
+        result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
         # maxVal = np.max(result)
         # minVal = np.max(result)
         # # result.astype
