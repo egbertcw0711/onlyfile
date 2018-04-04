@@ -194,12 +194,6 @@ def get_batches(random_indexes, batch_size):
     for idx in range(0, len(indexes),batch_size):
         yield indexes[idx:idx+batch_size]
 
-
-
-# data_size = 20000
-# epochs = 3
-# data = [i for i in range(data_size)]
-
 # Save the best validation model
 # saver = tf.train.Saver()
 # save_dir = './checkpoints/'
@@ -207,8 +201,6 @@ def get_batches(random_indexes, batch_size):
 #     os.makedirs(save_dir)
 
 # best_validation = 1.57 # for particular tasks
-
-
 def scan_png_files(folder):
     '''
     folder: 1.png 3.png 4.png 6.png 7.exr unknown.mpeg
@@ -276,11 +268,6 @@ train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 
-# validation_color = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-# validation_mask = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-# validation_normal = np.zeros(shape = (1000,128,128,3), dtype = 'float32')
-
-
 # build the graph
 train_graph = tf.Graph()
 with train_graph.as_default():
@@ -297,32 +284,31 @@ with train_graph.as_default():
     prediction = tf.multiply(prediction,y)
     norm = tf.multiply(norm,y)
 
-    for k in range(batch_size):
-        cost += -tf.reduce_sum(tf.multiply(prediction,norm))/(128**2)
+    # for k in range(batch_size):
         # cost += tf.norm(prediction[k,:,:,:]-norm[k,:,:,:])
     # mean_angle_error = 0
     # total_pixels = 0
     
-    # for j in range(batch_size):        
-    #     prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
-    #     groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
-    #     mask = y[j,:,:,0]
-    #     bmask = tf.cast(mask,tf.bool)
+    for j in range(batch_size):        
+        # prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
+        # groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
+        mask = y[j,:,:,0]
+        # bmask = tf.cast(mask,tf.bool)
 
-    #     total_pixels += tf.count_nonzero(y[j,:,:,0])
-    #     #   bmask = bmask != 0
+        total_pixels += tf.count_nonzero(y[j,:,:,0])
+        #   bmask = bmask != 0
         
-    #     a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
-    #     a22 = tf.boolean_mask(tf.reduce_sum(groundtruth * groundtruth, axis=2),bmask)
-    #     a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),bmask)
+        a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),mask)
+        a22 = tf.boolean_mask(tf.reduce_sum(norm * norm, axis=2),mask)
+        a12 = tf.boolean_mask(tf.reduce_sum(prediction * groundtruth, axis=2),mask)
 
-    #     cos_dist = a12 / tf.sqrt(a11 * a22)
-    #     # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
-    #     cos_dist = tf.clip_by_value(cos_dist, -1, 1)
-    #     angle_error = tf.acos(cos_dist)
-    #     mean_angle_error += tf.reduce_sum(angle_error)
+        cos_dist = a12 / tf.sqrt(a11 * a22)
+        # cos_dist[tf.is_nan(cos_dist)] = -1 # missing this in the evalution
+        cos_dist = tf.clip_by_value(cos_dist, -1, 1)
+        angle_error = tf.acos(cos_dist)
+        mean_angle_error += -tf.reduce_sum(angle_error)
 
-    # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
+    cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     cost = tf.divide(cost,batch_size)
 
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
