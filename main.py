@@ -136,8 +136,8 @@ def buildModel(x):
     # print(convD.shape) # 32 x 32 x 256
     ##
     ###
-    # convE = hourglass(convD,256,256,32,1,3,5,7) 
-    convE = convD
+    convE = hourglass(convD,256,256,32,1,3,5,7) 
+    # convE = convD
     # convF = hourglass(convE,256,256,64,1,3,7,11)
     convF = convE
     # print(convF.shape) # 32 x 32 x 256
@@ -147,13 +147,13 @@ def buildModel(x):
     convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='VALID')
     convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7)
     # convE_3 = hourglass(convE_2,256,256,32,1,3,5,7)
-    convE_2 = convD_maxpool
+    convE_3 = convD_2
     # print(convE_3.shape) # 16 x 16 x 256
     ###
     ####
     convE_4 = hourglass(convE_3,256,256,32,1,3,5,7)
-    # convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
-    convE_5 = convE_4
+    convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
+    # convE_5 = convE_4
     # print(convE_5.shape) # 16 x 16 x 256
     #print(convE_5.shape)
     [dummybatch,height,width,depth] = convE_5.shape
@@ -172,8 +172,8 @@ def buildModel(x):
     # print(convE_9.shape) # 16 x 16 x 256
     ####
     ###
-    # convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
-    convE_10 = convE_9
+    convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
+    # convE_10 = convE_9
     # convF_2 = hourglass(convE_10,256,256,64,1,3,7,11)
     convF_2 = convE_10
     upsample_3 = tf.image.resize_nearest_neighbor(convF_2,[height2,width2])
@@ -181,8 +181,8 @@ def buildModel(x):
     #print(convF_3.shape)
     ###
     ##
-    # convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
-    convE_11 = convF_3
+    convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
+    # convE_11 = convF_3
     convG = hourglass(convE_11,256,128,32,1,3,5,7)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
