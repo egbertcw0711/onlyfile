@@ -8,9 +8,6 @@ from PIL import Image
 import glob
 import random
 
-# from __future__ import print_function
-
-# import argparse
 
 def readimage(folder, index):
     path = os.path.join(folder, str(index)+'.png')
@@ -197,19 +194,19 @@ def get_batches(random_indexes, batch_size):
     for idx in range(0, len(indexes),batch_size):
         yield indexes[idx:idx+batch_size]
 
-# import random
+
 
 data_size = 20000
-epochs = 1
+epochs = 3
 data = [i for i in range(data_size)]
 
 # Save the best validation model
 # saver = tf.train.Saver()
-save_dir = './checkpoints/'
-if not os.path.exists(save_dir):
-    os.makedirs(save_dir)
+# save_dir = './checkpoints/'
+# if not os.path.exists(save_dir):
+#     os.makedirs(save_dir)
 
-best_validation = 1.57 # for particular tasks
+# best_validation = 1.57 # for particular tasks
 
 
 def scan_png_files(folder):
@@ -272,7 +269,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 
-batch_size = 16
+batch_size = 32
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -290,20 +287,11 @@ with train_graph.as_default():
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
     convH_2 = buildModel(x)
-  
-    # prediction = convH_2 # pred
-    #     norm = z # gt
-    # cost = 0
     
     mean_angle_error = 0
     total_pixels = 0
-
-#     prediction = tf.multiply(prediction,y)
-#     norm = tf.multiply(norm,y)
     
-    for j in range(batch_size):
-#         cost += tf.norm(tf.subtract(prediction[j,:,:,:],norm[j,:,:,:]))
-        
+    for j in range(batch_size):        
         prediction = ((convH_2[j,:,:,:] / 255.0) - 0.5) * 2
         groundtruth = ((z[j,:,:,:] / 255.0) - 0.5) * 2
         mask = y[j,:,:,0]
@@ -335,8 +323,7 @@ with tf.Session(graph=train_graph) as sess:
         num_batches = 0
         random.shuffle(data)
         train, test = train_test_split(data,data_size//20)
-#         print(train[:10])
-        loss = []
+        # loss = []
         los = 0
         for batch_index in get_batches(train,batch_size):
             counter = 0
@@ -353,14 +340,14 @@ with tf.Session(graph=train_graph) as sess:
             #       'Training loss: {:.3f}'.format(c))
             los += c
             # sess.run(opt,feed_dict={x:train_color, y:train_mask, z:train_normal})
-            num_batches += 1
+            # num_batches += 1
             
             if num_batches % 10 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches+1,len(train)//batch_size),\
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
 
-            if num_batches % 100 == 0: 
+            if num_batches % 500 == 0: 
 #                 c = sess.run(cost,feed_dict={x:train_color, y:train_mask, z:train_normal})
 #                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
 #                   'Training loss: {:.3f}'.format(c))
@@ -368,7 +355,7 @@ with tf.Session(graph=train_graph) as sess:
                 valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
                 valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
                 # valid_normal = np.zeros(shape=(0,128,128,3),dtype='float32')
-                # cnt = 0
+                cnt = 1
                 for k in test:
                     valid_color[0:,:,:] = readimage('./train/color', k)
                     valid_mask[0,:,:,0] = readmask('./train/mask', k)
@@ -377,6 +364,9 @@ with tf.Session(graph=train_graph) as sess:
                     result = sess.run(convH_2/255.0, feed_dict = {x: valid_color, y:valid_mask})
                     image=Image.fromarray(result.astype(np.uint8)[0])
                     image.save('./train/pred/'+str(k)+'.png','png')
+                    if cnt % 200 == 0:
+                        print(cnt)
+                    cnt += 1
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
                 print(valid)
                 # if valid < best_validation:
@@ -401,6 +391,7 @@ with tf.Session(graph=train_graph) as sess:
             #     print('Cross Validation Result: ')
             #     print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
             #       'Validation loss: {:.3f}'.format(c))
+            num_batches += 1
 
     num_test = len(glob.glob('./test/color/*.png'))
     test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
