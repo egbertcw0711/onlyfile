@@ -235,8 +235,8 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         groundtruth = imageio.imread(os.path.join(groundtruth_folder, fname))
         mask = imageio.imread(os.path.join(mask_folder, fname)) # Greyscale image
        
-        prediction = ((prediction*1.0 / 255.0) - 0.5) * 2
-        groundtruth = ((groundtruth*1.0 / 255.0) - 0.5) * 2
+        prediction = ((prediction / 255.0) - 0.5) * 2
+        groundtruth = ((groundtruth / 255.0) - 0.5) * 2
 
         total_pixels += np.count_nonzero(mask)
         mask = mask != 0
@@ -351,29 +351,29 @@ with tf.Session(graph=train_graph) as sess:
                     tf.train.Saver().save(sess, './best_model')
                     print('best model saved!\n')
 
-        # if e % 1 == 0:
-        #     print('generate validation the picture')
-        #     valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-        #     valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-        #     # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-        #     cnt = 1
-        #     for k in test:
-        #         valid_color[0:,:,:] = readimage('./train/color', k)
-        #         valid_mask[0,:,:,0] = readmask('./train/mask', k)
-        #         valid_mask[0,:,:,1] = readmask('./train/mask', k)
-        #         valid_mask[0,:,:,2] = readmask('./train/mask', k)
-        #         result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-        #         print(result.shape)
-        #         # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
-        #         image=Image.fromarray(result.astype(np.uint8)[0])
-        #         # print(rescaled.shape)
-        #         # image = Image.fromarray(rescaled[0])
-        #         image.save('./train/pred/'+str(k)+'.png','png')
-        #         cnt += 1
-        #         if cnt % 100 == 0:
-        #             print('generate',cnt,'pictures')
-        #     valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-        #     print(valid)
+        if e % 1 == 0:
+            print('generate validation the picture')
+            valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+            valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+            # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+            cnt = 1
+            for k in test:
+                valid_color[0:,:,:] = readimage('./train/color', k)
+                valid_mask[0,:,:,0] = readmask('./train/mask', k)
+                valid_mask[0,:,:,1] = readmask('./train/mask', k)
+                valid_mask[0,:,:,2] = readmask('./train/mask', k)
+                result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
+                print(result.shape)
+                # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
+                image=Image.fromarray(result.astype(np.uint8)[0])
+                # print(rescaled.shape)
+                # image = Image.fromarray(rescaled[0])
+                image.save('./train/pred/'+str(k)+'.png','png')
+                cnt += 1
+                if cnt % 100 == 0:
+                    print('generate',cnt,'pictures')
+            valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+            print(valid)
 
 
     # num_test = len(glob.glob('./test/color/*.png'))
