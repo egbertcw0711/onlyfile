@@ -190,18 +190,11 @@ def train_test_split(random_indexes,validation_size):
     return train_indexes, test_indexes
 
 def get_batches(random_indexes, batch_size):
-    num_batches = int(20000 / batch_size)
+    num_batches = len(random_indexes) // batch_size
     indexes = random_indexes[:num_batches*batch_size]
     for idx in range(0, len(indexes),batch_size):
         yield indexes[idx:idx+batch_size]
 
-# Save the best validation model
-# saver = tf.train.Saver()
-# save_dir = './checkpoints/'
-# if not os.path.exists(save_dir):
-#     os.makedirs(save_dir)
-
-# best_validation = 1.57 # for particular tasks
 def scan_png_files(folder):
     '''
     folder: 1.png 3.png 4.png 6.png 7.exr unknown.mpeg
@@ -301,8 +294,8 @@ with train_graph.as_default():
         cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
         # tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
         cos_dist = tf.clip_by_value(cos_dist, -1, 1)
-        # angle_error = tf.acos(cos_dist)
-        mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
+        angle_error = tf.acos(cos_dist)
+        mean_angle_error += tf.reduce_sum(angle_error) # -1 the best
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     opt = tf.train.AdamOptimizer(0.00005).minimize(cost)
@@ -339,7 +332,7 @@ with tf.Session(graph=train_graph) as sess:
                 valid_batches, vlos = 0, 0
                 for index in get_batches(test,batch_size):
                     counter = 0
-                    for k in batch_index:
+                    for k in index:
                         validation_color[counter,:,:,:] = readimage('./train/color', k)
                         validation_mask[counter,:,:,0] = readmask('./train/mask', k)
                         validation_mask[counter,:,:,1] = readmask('./train/mask', k)
@@ -350,7 +343,6 @@ with tf.Session(graph=train_graph) as sess:
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
                     valid_batches += 1
-
                 print('Avg validation loss: {:.3f}\n'.format(vlos/valid_batches))
 
         if e % 2 == 0:
