@@ -332,12 +332,12 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % 20 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg 10 bathces training loss: {:.3f}'.format(los/10))
+                      'Avg 10 bathces training loss: {:.3f}'.format(los/20))
                 los = 0
 
-            if num_bathes % 200 == 0:
+            if num_batches % 200 == 0:
                 valid_batches, vlos = 0, 0
-                for index in get_batches(test,10):
+                for index in get_batches(test,batch_size):
                     counter = 0
                     for k in batch_index:
                         validation_color[counter,:,:,:] = readimage('./train/color', k)
