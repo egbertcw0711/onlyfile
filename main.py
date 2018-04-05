@@ -274,22 +274,22 @@ with train_graph.as_default():
     y = tf.placeholder('float32',[None, 128,128,3]) # mask
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
-    # output = buildModel(x)
-    w1 = weight_variable([3,3,3,512])
-    b1 = bias_variable([512])
-    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    output = buildModel(x)
+    #w1 = weight_variable([3,3,3,512])
+    #b1 = bias_variable([512])
+    #conv1 = tf.nn.relu(conv2d(x,w1)+b1)
 
-    w2 = weight_variable([1,1,512,3])
-    b2 = bias_variable([3])
-    output = tf.nn.relu(conv2d(conv1,w2)+b2)
+    #w2 = weight_variable([1,1,512,3])
+    #b2 = bias_variable([3])
+    #output = tf.nn.relu(conv2d(conv1,w2)+b2)
 
     mean_angle_error = 0
     total_pixels = 0
 
     for j in range(batch_size):     
         # print(tf.reduce_max(output[j,:,:,:]))   
-        prediction = ((output[j,:,:,:]*1.0 - 0.5) * 2 ################
-        norm = ((z[j,:,:,:]*1.0) - 0.5) * 2            ################
+        prediction = (output[j,:,:,:] - 0.5) * 2 ################
+        norm = (z[j,:,:,:] - 0.5) * 2            ################
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -340,7 +340,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.arccos(-los/every)))
                 los = 0
 
-            if num_batches % 100 == 0:
+            if num_batches % 300 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
@@ -373,12 +373,12 @@ with tf.Session(graph=train_graph) as sess:
                     valid_mask[0,:,:,1] = readmask('./train/mask', k)
                     valid_mask[0,:,:,2] = readmask('./train/mask', k)
                     result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-                    print(result.shape)
+                    # print(result.shape)
                     # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
-                    image=Image.fromarray(result.astype(np.uint8)[0])
+                    image=Image.fromarray((255*result).astype(np.uint8)[0])
                     # print(rescaled.shape)
                     # image = Image.fromarray(rescaled[0])
-                    image.save('./train/pred/'+str(k)+'.png','png')
+                    image.save('./train/pred/'+str(k)+'.png')
                     cnt += 1
                     if cnt % 100 == 0:
                         print('generate',cnt,'pictures')
@@ -386,21 +386,21 @@ with tf.Session(graph=train_graph) as sess:
                 print(valid)
 
 
-    # num_test = len(glob.glob('./test/color/*.png'))
-    # test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    # test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    # cnt = 1
-    # for k in range(num_test):
-    #     test_color[0,:,:,:] = readimage('./test/color', k)
-    #     test_mask[0,:,:,0] = readmask('./test/mask', k)
-    #     test_mask[0,:,:,1] = readmask('./test/mask', k)
-    #     test_mask[0,:,:,2] = readmask('./test/mask', k)
-    #     result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
-    #     # imgio = np.reshape(result,[128,128,3])
-    #     # pth = './test/normal/'+str(k)+'.png'
-    #     # scipy.misc.imsave(pth,imgio)
-    #     image=Image.fromarray(result.astype(np.uint8)[0])
-    #     image.save('./test/normal/'+str(k)+'.png','png')
-    #     if cnt % 100 == 0:
-    #         print('generate',cnt,'normal')
-    #     cnt += 1
+    num_test = len(glob.glob('./test/color/*.png'))
+    test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    cnt = 1
+    for k in range(num_test):
+        test_color[0,:,:,:] = readimage('./test/color', k)
+        test_mask[0,:,:,0] = readmask('./test/mask', k)
+        test_mask[0,:,:,1] = readmask('./test/mask', k)
+        test_mask[0,:,:,2] = readmask('./test/mask', k)
+        result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
+        # imgio = np.reshape(result,[128,128,3])
+        # pth = './test/normal/'+str(k)+'.png'
+        # scipy.misc.imsave(pth,imgio)
+        image=Image.fromarray((255*result).astype(np.uint8)[0])
+        image.save('./test/normal/'+str(k)+'.png','png')
+        if cnt % 100 == 0:
+            print('generate',cnt,'normal')
+        cnt += 1
