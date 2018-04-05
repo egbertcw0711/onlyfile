@@ -325,7 +325,7 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % 20 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg 10 bathces training loss: {:.3f}{:.3f}'.format(los/20,np.arccos(-los/20)))
+                      'Avg 10 bathces training loss: {:.3f}|{:.3f}'.format(los/20,np.arccos(-los/20)))
                 los = 0
 
             if num_batches % 200 == 0:
@@ -344,7 +344,7 @@ with tf.Session(graph=train_graph) as sess:
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
                     valid_batches += 1
-                print('Avg validation loss: {:.3f}{:.3f}\n'.format(vlos/valid_batches,np.arcos(-vlos/valid_batches)))
+                print('Avg validation loss: {:.3f}|{:.3f}\n'.format(vlos/valid_batches,np.arcos(-vlos/valid_batches)))
 
         if e % 1 == 0:
             print('generate validation the picture')
