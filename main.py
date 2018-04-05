@@ -337,23 +337,24 @@ with tf.Session(graph=train_graph) as sess:
             valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             cnt = 1
-            vlos = 0
+            # vlos = 0
             for k in test:
                 valid_color[0:,:,:] = readimage('./train/color', k)
                 valid_mask[0,:,:,0] = readmask('./train/mask', k)
                 valid_mask[0,:,:,1] = readmask('./train/mask', k)
                 valid_mask[0,:,:,2] = readmask('./train/mask', k)
                 valid_normal[0,:,:,:] = readimage('./train/normal', k)
-                result,c = sess.run([output*1.0/255.0,cost], feed_dict = {x: valid_color, y:valid_mask,z:valid_normal})
-                vlos += c
+                result = sess.run(output/255.0, feed_dict = {x: valid_color, y:valid_mask})
+                # vlos += c
                 # imgio = np.reshape(result,[128,128,3])
                 image=Image.fromarray(result.astype(np.uint8)[0])
-                image.save('../test/normal_128_9k/'+str(_)+'.png','png')
+                image.save('../train/pred/'+str(k)+'.png','png')
                 # pth = './train/pred/'+str(k)+'.png'
                 # scipy.misc.imsave(pth,imgio)
+                cnt += 1
                 if cnt % 100 == 0:
-                    print('avg validation loss',vlos*1.0/100.0)
-                    cnt += 1
+                    print(cnt)
+                    # print('avg validation loss',vlos*1.0/100.0)
             valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
             print(valid)
 
@@ -372,7 +373,7 @@ with tf.Session(graph=train_graph) as sess:
         # pth = './test/normal/'+str(k)+'.png'
         # scipy.misc.imsave(pth,imgio)
         image=Image.fromarray(result.astype(np.uint8)[0])
-        image.save('../test/normal_128_9k/'+str(_)+'.png','png')
+        image.save('../test/normal/'+str(k)+'.png','png')
         if cnt % 100 == 0:
             print('generate',cnt,'normal')
         cnt += 1
