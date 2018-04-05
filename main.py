@@ -300,7 +300,7 @@ with train_graph.as_default():
         mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
-    opt = tf.train.AdamOptimizer(0.00003).minimize(cost)
+    opt = tf.train.AdamOptimizer(0.00005).minimize(cost)
 
 
 # the driver
@@ -331,8 +331,8 @@ with tf.Session(graph=train_graph) as sess:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
-        if e % 2 == 0:
-            print('generate the picture')
+        if e % 1 == 0:
+            print('generate validation the picture')
             valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
@@ -346,12 +346,14 @@ with tf.Session(graph=train_graph) as sess:
                 valid_normal[0,:,:,:] = readimage('./train/normal', k)
                 result,c = sess.run([output*1.0/255.0,cost], feed_dict = {x: valid_color, y:valid_mask,z:valid_normal})
                 vlos += c
-                imgio = np.reshape(result,[128,128,3])
-                pth = './train/pred/'+str(k)+'.png'
-                scipy.misc.imsave(pth,imgio)
+                # imgio = np.reshape(result,[128,128,3])
+                image=Image.fromarray(result.astype(np.uint8)[0])
+                image.save('../test/normal_128_9k/'+str(_)+'.png','png')
+                # pth = './train/pred/'+str(k)+'.png'
+                # scipy.misc.imsave(pth,imgio)
                 if cnt % 100 == 0:
-                    print('avg validation loss',vlos/100.0)
-                cnt += 1
+                    print('avg validation loss',vlos*1.0/100.0)
+                    cnt += 1
             valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
             print(valid)
 
@@ -366,11 +368,11 @@ with tf.Session(graph=train_graph) as sess:
         test_mask[0,:,:,1] = readmask('./test/mask', k)
         test_mask[0,:,:,2] = readmask('./test/mask', k)
         result = sess.run(output*1.0/255.0, feed_dict = {x:test_color,y:test_mask})
-        imgio = np.reshape(result,[128,128,3])
-        pth = './test/normal/'+str(k)+'.png'
-        scipy.misc.imsave(pth,imgio)
+        # imgio = np.reshape(result,[128,128,3])
+        # pth = './test/normal/'+str(k)+'.png'
+        # scipy.misc.imsave(pth,imgio)
+        image=Image.fromarray(result.astype(np.uint8)[0])
+        image.save('../test/normal_128_9k/'+str(_)+'.png','png')
         if cnt % 100 == 0:
             print('generate',cnt,'normal')
         cnt += 1
-    # valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-    # print(valid)
