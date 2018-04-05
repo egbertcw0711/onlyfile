@@ -307,10 +307,11 @@ train, test = train_test_split(data,data_size//20)
 
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
+    min_loss_so_far = 1.57
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 1
+        every = 5
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -344,8 +345,11 @@ with tf.Session(graph=train_graph) as sess:
                     
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
-                    valid_batches += 1
                 print('Avg validation loss: {:.3f}|{:.3f}\n'.format(vlos/valid_batches,np.arccos(-vlos/valid_batches)))
+                if vlos < min_loss_so_far:
+                    min_loss_so_far = vlos
+                    tf.train.Saver().save(session, 'best_model')
+                    print('best model saved!')
 
         # if e % 1 == 0:
         #     print('generate validation the picture')
