@@ -280,8 +280,8 @@ with train_graph.as_default():
     total_pixels = 0
 
     for j in range(batch_size):        
-        prediction = ((output[j,:,:,:]*1.0/255.0) - 0.5) * 2
-        norm = ((z[j,:,:,:]*1.0/255.0) - 0.5) * 2
+        prediction = ((output[j,:,:,:]) - 0.5) * 2 ################
+        norm = ((z[j,:,:,:]) - 0.5) * 2            ################
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -315,11 +315,11 @@ with tf.Session(graph=train_graph) as sess:
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
-                train_color[counter,:,:,:] = readimage('./train/color', i)
-                train_mask[counter,:,:,0] = readmask('./train/mask', i)
-                train_mask[counter,:,:,1] = readmask('./train/mask', i)
-                train_mask[counter,:,:,2] = readmask('./train/mask', i)
-                train_normal[counter,:,:,:] = readimage('./train/normal', i)
+                train_color[counter,:,:,:] = readimage('./train/color', i)/255.0
+                train_mask[counter,:,:,0] = readmask('./train/mask', i)/255.0
+                train_mask[counter,:,:,1] = readmask('./train/mask', i)/255.0
+                train_mask[counter,:,:,2] = readmask('./train/mask', i)/255.0
+                train_normal[counter,:,:,:] = readimage('./train/normal', i)/255.0
                 counter += 1
             
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
@@ -330,26 +330,26 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.arccos(-los/every)))
                 los = 0
 
-            if num_batches % 200 == 0:
+            if num_batches % 900 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
                     counter = 0
                     for k in index:
-                        validation_color[counter,:,:,:] = readimage('./train/color', k)
-                        validation_mask[counter,:,:,0] = readmask('./train/mask', k)
-                        validation_mask[counter,:,:,1] = readmask('./train/mask', k)
-                        validation_mask[counter,:,:,2] = readmask('./train/mask', k)
-                        validation_normal[counter,:,:,:] = readimage('./train/normal', k)
+                        validation_color[counter,:,:,:] = readimage('./train/color', k)/255.0
+                        validation_mask[counter,:,:,0] = readmask('./train/mask', k)/255.0
+                        validation_mask[counter,:,:,1] = readmask('./train/mask', k)/255.0
+                        validation_mask[counter,:,:,2] = readmask('./train/mask', k)/255.0
+                        validation_normal[counter,:,:,:] = readimage('./train/normal', k)/255.0
                         counter += 1
                     
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
-                print('Avg validation loss: {:.3f}|{:.3f}\n'.format(vlos/valid_batches,np.arccos(-vlos/valid_batches)))
+                print('Avg validation loss: {:.3f}|{:.3f}'.format(vlos/valid_batches,np.arccos(-vlos/valid_batches)))
                 if vlos < min_loss_so_far:
                     min_loss_so_far = vlos
-                    tf.train.Saver().save(session, 'best_model')
-                    print('best model saved!')
+                    tf.train.Saver().save(sess, './best_model')
+                    print('best model saved!\n')
 
         # if e % 1 == 0:
         #     print('generate validation the picture')
