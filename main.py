@@ -264,10 +264,15 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
 data_size = 20000
 epochs = 4
 data = [i for i in range(data_size)]
-batch_size = 16
+batch_size = 20
+
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
+
+validation_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
+validation_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
+validation_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 
 # build the graph
 train_graph = tf.Graph()
@@ -305,14 +310,12 @@ with train_graph.as_default():
 
 # the driver
 random.shuffle(data)
-train, test = train_test_split(data,data_size//40)
+train, test = train_test_split(data,data_size//20)
 
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
     for e in range(1,epochs+1):
         num_batches = 0
-        # random.shuffle(data)
-        # train, test = train_test_split(data,data_size//20)
         los = 0
         for batch_index in get_batches(train,batch_size):
             counter = 0
@@ -327,17 +330,35 @@ with tf.Session(graph=train_graph) as sess:
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
             los += c
             num_batches += 1
-            if num_batches % 10 == 0:
+            if num_batches % 20 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
                       'Avg 10 bathces training loss: {:.3f}'.format(los/10))
                 los = 0
-        if e % 1 == 0:
+
+            if num_bathes % 200 == 0:
+                valid_batches, vlos = 0, 0
+                for index in get_batches(test,10):
+                    counter = 0
+                    for k in batch_index:
+                        validation_color[counter,:,:,:] = readimage('./train/color', k)
+                        validation_mask[counter,:,:,0] = readmask('./train/mask', k)
+                        validation_mask[counter,:,:,1] = readmask('./train/mask', k)
+                        validation_mask[counter,:,:,2] = readmask('./train/mask', k)
+                        validation_normal[counter,:,:,:] = readimage('./train/normal', k)
+                        counter += 1
+                    
+                    vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
+                    vlos += vc
+                    valid_batches += 1
+
+                print('Avg validation loss: {:.3f}\n'.format(vlos/valid_batches))
+
+        if e % 2 == 0:
             print('generate validation the picture')
             valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
             cnt = 1
-            # vlos = 0
             for k in test:
                 valid_color[0:,:,:] = readimage('./train/color', k)
                 valid_mask[0,:,:,0] = readmask('./train/mask', k)
@@ -345,16 +366,14 @@ with tf.Session(graph=train_graph) as sess:
                 valid_mask[0,:,:,2] = readmask('./train/mask', k)
                 valid_normal[0,:,:,:] = readimage('./train/normal', k)
                 result = sess.run(output/255.0, feed_dict = {x: valid_color, y:valid_mask})
-                # vlos += c
-                # imgio = np.reshape(result,[128,128,3])
-                image=Image.fromarray(result.astype(np.uint8)[0])
-                image.save('../train/pred/'+str(k)+'.png','png')
-                # pth = './train/pred/'+str(k)+'.png'
-                # scipy.misc.imsave(pth,imgio)
+                imgio = np.reshape(result,[128,128,3])
+                pth = './train/pred/'+str(k)+'.png'
+                scipy.misc.imsave(pth,imgio)
+                # image=Image.fromarray(result.astype(np.uint8)[0])
+                # image.save('./train/pred/'+str(k)+'.png','png')
                 cnt += 1
                 if cnt % 100 == 0:
-                    print(cnt)
-                    # print('avg validation loss',vlos*1.0/100.0)
+                    print('generate',cnt,'pictures')
             valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
             print(valid)
 
@@ -368,12 +387,12 @@ with tf.Session(graph=train_graph) as sess:
         test_mask[0,:,:,0] = readmask('./test/mask', k)
         test_mask[0,:,:,1] = readmask('./test/mask', k)
         test_mask[0,:,:,2] = readmask('./test/mask', k)
-        result = sess.run(output*1.0/255.0, feed_dict = {x:test_color,y:test_mask})
-        # imgio = np.reshape(result,[128,128,3])
-        # pth = './test/normal/'+str(k)+'.png'
-        # scipy.misc.imsave(pth,imgio)
-        image=Image.fromarray(result.astype(np.uint8)[0])
-        image.save('../test/normal/'+str(k)+'.png','png')
+        result = sess.run(output/255.0, feed_dict = {x:test_color,y:test_mask})
+        imgio = np.reshape(result,[128,128,3])
+        pth = './test/normal/'+str(k)+'.png'
+        scipy.misc.imsave(pth,imgio)
+        # image=Image.fromarray(result.astype(np.uint8)[0])
+        # image.save('./test/normal/'+str(k)+'.png','png')
         if cnt % 100 == 0:
             print('generate',cnt,'normal')
         cnt += 1
