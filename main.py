@@ -255,7 +255,7 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 data_size = 20000
-epochs = 1
+epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
 
@@ -298,7 +298,7 @@ with train_graph.as_default():
         mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
     cost = mean_angle_error*1.0 / tf.cast(total_pixels,tf.float32)
-    opt = tf.train.AdamOptimizer(0.001).minimize(cost)
+    opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
 
 # the driver
@@ -310,6 +310,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
+        every = 1
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -323,9 +324,9 @@ with tf.Session(graph=train_graph) as sess:
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
             los += c
             num_batches += 1
-            if num_batches % 20 == 0:
+            if num_batches % every == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg 10 bathces training loss: {:.3f}|{:.3f}'.format(los/20,np.arccos(-los/20)))
+                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/20,np.arccos(-los/20)))
                 los = 0
 
             if num_batches % 200 == 0:
@@ -344,47 +345,48 @@ with tf.Session(graph=train_graph) as sess:
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
                     valid_batches += 1
-                print('Avg validation loss: {:.3f}|{:.3f}\n'.format(vlos/valid_batches,np.arcos(-vlos/valid_batches)))
+                print('Avg validation loss: {:.3f}|{:.3f}\n'.format(vlos/valid_batches,np.arccos(-vlos/valid_batches)))
 
-        if e % 1 == 0:
-            print('generate validation the picture')
-            valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            cnt = 1
-            for k in test:
-                valid_color[0:,:,:] = readimage('./train/color', k)
-                valid_mask[0,:,:,0] = readmask('./train/mask', k)
-                valid_mask[0,:,:,1] = readmask('./train/mask', k)
-                valid_mask[0,:,:,2] = readmask('./train/mask', k)
-                result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-                # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
-                image=Image.fromarray(result.astype(np.uint8)[0])
-                # print(rescaled.shape)
-                # image = Image.fromarray(rescaled[0])
-                image.save('./train/pred/'+str(k)+'.png','png')
-                cnt += 1
-                if cnt % 100 == 0:
-                    print('generate',cnt,'pictures')
-            valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-            print(valid)
+        # if e % 1 == 0:
+        #     print('generate validation the picture')
+        #     valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+        #     valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+        #     # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+        #     cnt = 1
+        #     for k in test:
+        #         valid_color[0:,:,:] = readimage('./train/color', k)
+        #         valid_mask[0,:,:,0] = readmask('./train/mask', k)
+        #         valid_mask[0,:,:,1] = readmask('./train/mask', k)
+        #         valid_mask[0,:,:,2] = readmask('./train/mask', k)
+        #         result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
+        #         print(result.shape)
+        #         # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
+        #         image=Image.fromarray(result.astype(np.uint8)[0])
+        #         # print(rescaled.shape)
+        #         # image = Image.fromarray(rescaled[0])
+        #         image.save('./train/pred/'+str(k)+'.png','png')
+        #         cnt += 1
+        #         if cnt % 100 == 0:
+        #             print('generate',cnt,'pictures')
+        #     valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+        #     print(valid)
 
 
-    num_test = len(glob.glob('./test/color/*.png'))
-    test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    cnt = 1
-    for k in range(num_test):
-        test_color[0,:,:,:] = readimage('./test/color', k)
-        test_mask[0,:,:,0] = readmask('./test/mask', k)
-        test_mask[0,:,:,1] = readmask('./test/mask', k)
-        test_mask[0,:,:,2] = readmask('./test/mask', k)
-        result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
-        # imgio = np.reshape(result,[128,128,3])
-        # pth = './test/normal/'+str(k)+'.png'
-        # scipy.misc.imsave(pth,imgio)
-        image=Image.fromarray(result.astype(np.uint8)[0])
-        image.save('./test/normal/'+str(k)+'.png','png')
-        if cnt % 100 == 0:
-            print('generate',cnt,'normal')
-        cnt += 1
+    # num_test = len(glob.glob('./test/color/*.png'))
+    # test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # cnt = 1
+    # for k in range(num_test):
+    #     test_color[0,:,:,:] = readimage('./test/color', k)
+    #     test_mask[0,:,:,0] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,1] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,2] = readmask('./test/mask', k)
+    #     result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
+    #     # imgio = np.reshape(result,[128,128,3])
+    #     # pth = './test/normal/'+str(k)+'.png'
+    #     # scipy.misc.imsave(pth,imgio)
+    #     image=Image.fromarray(result.astype(np.uint8)[0])
+    #     image.save('./test/normal/'+str(k)+'.png','png')
+    #     if cnt % 100 == 0:
+    #         print('generate',cnt,'normal')
+    #     cnt += 1
