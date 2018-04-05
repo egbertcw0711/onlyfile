@@ -245,11 +245,12 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         a22 = np.sum(groundtruth * groundtruth, axis=2)[mask]
         a12 = np.sum(prediction * groundtruth, axis=2)[mask]
 
-        cos_dist = a12 / np.sqrt(a11 * a22)
-        cos_dist[np.isnan(cos_dist)] = -1
+        cos_dist = -1.0*a12 / np.sqrt(a11 * a22)
+        # cos_dist[np.isnan(cos_dist)] = -1
         cos_dist = np.clip(cos_dist, -1, 1)
 
-        angle_error = np.arccos(cos_dist)
+        # angle_error = np.arccos(cos_dist)
+        angle_error = cos_dist
         mean_angle_error += np.sum(angle_error)
 
     return mean_angle_error / total_pixels
@@ -300,8 +301,9 @@ with train_graph.as_default():
         a12 = tf.boolean_mask(tf.reduce_sum(prediction*norm, axis=2),bmask)
 
         cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
+        # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
         # tf.assign(cos_dist[tf.is_nan(cos_dist)],-1) # missing this in the evalution
-        cos_dist = tf.clip_by_value(cos_dist, -1, 1)
+        cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
         # angle_error = tf.acos(cos_dist)
         mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
@@ -337,10 +339,10 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % every == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.arccos(-los/every)))
+                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.pi-np.arccos(los/every)))
                 los = 0
 
-            if num_batches % 300 == 0:
+            if num_batches % 100 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
