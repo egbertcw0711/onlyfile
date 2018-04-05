@@ -274,14 +274,23 @@ with train_graph.as_default():
     y = tf.placeholder('float32',[None, 128,128,3]) # mask
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
-    output = buildModel(x)
+    # output = buildModel(x)
+    w1 = weight_variable([3,3,3,512])
+    b1 = bias_variable([512])
+    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+
+    w2 = weight_variable([1,1,512,3])
+    b2 = bias_variable([3])
+    output = tf.nn.relu(conv2d(conv1,w2)+b2)
 
     mean_angle_error = 0
     total_pixels = 0
 
-    for j in range(batch_size):        
-        prediction = ((output[j,:,:,:]/tf.reduce_max(output[j,:,:,:])) - 0.5) * 2 ################
-        norm = ((z[j,:,:,:]/tf.reduce_max(output[j,:,:,:])) - 0.5) * 2            ################
+    for j in range(batch_size):     
+        for ch in range(3):
+        # print(tf.reduce_max(output[j,:,:,:]))   
+            prediction = ((output[j,:,:,ch]*1.0/tf.reduce_max(output[j,:,:,ch])) - 0.5) * 2 ################
+            norm = ((z[j,:,:,ch]*1.0/tf.reduce_max(output[j,:,:,ch])) - 0.5) * 2            ################
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -347,7 +356,7 @@ with tf.Session(graph=train_graph) as sess:
                     
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
-                print('Avg validation loss: {:.3f}/{:.1f}|{:.3f}'.format(vlos/valid_batches,valiad_batches,np.arccos(-vlos/valid_batches)))
+                print('Avg validation loss: {:.3f}/{:.1f}|{:.3f}'.format(vlos/valid_batches,valid_batches,np.arccos(-vlos/valid_batches)))
                 if vlos < min_loss_so_far:
                     min_loss_so_far = vlos
                     tf.train.Saver().save(sess, './best_model')
