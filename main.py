@@ -280,8 +280,8 @@ with train_graph.as_default():
     total_pixels = 0
 
     for j in range(batch_size):        
-        prediction = ((output[j,:,:,:]) - 0.5) * 2 ################
-        norm = ((z[j,:,:,:]) - 0.5) * 2            ################
+        prediction = ((output[j,:,:,:]/tf.reduce_max(output[j,:,:,:])) - 0.5) * 2 ################
+        norm = ((z[j,:,:,:]/tf.reduce_max(output[j,:,:,:])) - 0.5) * 2            ################
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
