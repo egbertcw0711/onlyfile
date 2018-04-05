@@ -326,7 +326,7 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % every == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/20,np.arccos(-los/20)))
+                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.arccos(-los/every)))
                 los = 0
 
             if num_batches % 200 == 0:
