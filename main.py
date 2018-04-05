@@ -304,6 +304,8 @@ with train_graph.as_default():
 # the driver
 random.shuffle(data)
 train, test = train_test_split(data,data_size//20)
+print(train[:10])
+print(test[:10])
 
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
@@ -330,7 +332,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.arccos(-los/every)))
                 los = 0
 
-            if num_batches % 900 == 0:
+            if num_batches % 100 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
@@ -345,35 +347,35 @@ with tf.Session(graph=train_graph) as sess:
                     
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
-                print('Avg validation loss: {:.3f}|{:.3f}'.format(vlos/valid_batches,np.arccos(-vlos/valid_batches)))
+                print('Avg validation loss: {:.3f}/{:.1f}|{:.3f}'.format(vlos/valid_batches,valiad_batches,np.arccos(-vlos/valid_batches)))
                 if vlos < min_loss_so_far:
                     min_loss_so_far = vlos
                     tf.train.Saver().save(sess, './best_model')
                     print('best model saved!\n')
 
-        if e % 1 == 0:
-            print('generate validation the picture')
-            valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-            cnt = 1
-            for k in test:
-                valid_color[0:,:,:] = readimage('./train/color', k)
-                valid_mask[0,:,:,0] = readmask('./train/mask', k)
-                valid_mask[0,:,:,1] = readmask('./train/mask', k)
-                valid_mask[0,:,:,2] = readmask('./train/mask', k)
-                result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-                print(result.shape)
-                # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
-                image=Image.fromarray(result.astype(np.uint8)[0])
-                # print(rescaled.shape)
-                # image = Image.fromarray(rescaled[0])
-                image.save('./train/pred/'+str(k)+'.png','png')
-                cnt += 1
-                if cnt % 100 == 0:
-                    print('generate',cnt,'pictures')
-            valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-            print(valid)
+        # if e % 1 == 0:
+                print('generate validation the picture')
+                valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                # valid_normal = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+                cnt = 1
+                for k in test:
+                    valid_color[0:,:,:] = readimage('./train/color', k)
+                    valid_mask[0,:,:,0] = readmask('./train/mask', k)
+                    valid_mask[0,:,:,1] = readmask('./train/mask', k)
+                    valid_mask[0,:,:,2] = readmask('./train/mask', k)
+                    result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
+                    print(result.shape)
+                    # rescaled = 255.0 / np.max(result) * (result-np.min(result)).astype(np.uint8)
+                    image=Image.fromarray(result.astype(np.uint8)[0])
+                    # print(rescaled.shape)
+                    # image = Image.fromarray(rescaled[0])
+                    image.save('./train/pred/'+str(k)+'.png','png')
+                    cnt += 1
+                    if cnt % 100 == 0:
+                        print('generate',cnt,'pictures')
+                valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+                print(valid)
 
 
     # num_test = len(glob.glob('./test/color/*.png'))
