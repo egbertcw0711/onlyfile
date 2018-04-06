@@ -249,8 +249,8 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         cos_dist[np.isnan(cos_dist)] = -1
         cos_dist = np.clip(cos_dist, -1, 1)
 
-        angle_error = np.arccos(cos_dist)
-        mean_angle_error += np.sum(cos_dist)
+        # angle_error = np.arccos(cos_dist)
+        mean_angle_error -= np.sum(cos_dist)
 
     return mean_angle_error / total_pixels
 
@@ -294,11 +294,13 @@ with train_graph.as_default():
     total_pixels = 0
 
     for j in range(batch_size):
-        nvp = tf.tile(tf.norm(output[j,:,:,:],axis=2),[3])
-        nvn = tf.tile(tf.norm(z[j,:,:,:],axis=2),[3])    
+        nvp = tf.norm(output[j,:,:,:],axis=2)
+        nvn = tf.norm(z[j,:,:,:],axis=2)    
+        nvp3 = tf.stack([nvp,nvp,nvp],axis=2)
+        nvn3  = tf.stack([nvn,nvn,nvn],axis=2)
         # print(tf.reduce_max(output[j,:,:,:]))   
-        prediction = (tf.divide(output[j,:,:,:],nvp) - 0.5) * 2.0 ################
-        norm = (tf.divide(z[j,:,:,:],nvn) - 0.5) * 2.0            ################
+        prediction = (tf.divide(output[j,:,:,:],nvp3) - 0.5) * 2.0 ################
+        norm = (tf.divide(z[j,:,:,:],nvn3) - 0.5) * 2.0            ################
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -331,7 +333,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 5
+        every = 1
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -349,10 +351,10 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % every == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg {} bathc(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.pi-np.arccos(los/every)))
+                      'Avg {} batch(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.pi-np.arccos(los/every)))
                 los = 0
 
-            if num_batches % 20 == 0:
+            if num_batches % 2 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
