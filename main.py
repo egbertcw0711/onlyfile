@@ -250,8 +250,8 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         cos_dist = np.clip(cos_dist, -1, 1)
 
         # angle_error = np.arccos(cos_dist)
-        angle_error = cos_dist
-        mean_angle_error += np.sum(angle_error)
+        # angle_error = cos_dist
+        mean_angle_error += np.sum(cos_dist)
 
     return mean_angle_error / total_pixels
 
@@ -275,17 +275,17 @@ with train_graph.as_default():
     y = tf.placeholder('float32',[None, 128,128,3]) # mask
     z = tf.placeholder('float32',[None, 128,128,3]) # normal labels
 
-    output = buildModel(x)
-    #w1 = weight_variable([3,3,3,512])
-    #b1 = bias_variable([512])
-    #conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    # output = buildModel(x)
+    w1 = weight_variable([3,3,3,512])
+    b1 = bias_variable([512])
+    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
 
-    #w2 = weight_variable([1,1,512,3])
-    #b2 = bias_variable([3])
-    #output = tf.nn.relu(conv2d(conv1,w2)+b2)
+    w2 = weight_variable([1,1,512,3])
+    b2 = bias_variable([3])
+    output = tf.nn.relu(conv2d(conv1,w2)+b2)
 
-    mean_angle_error = 0
-    total_pixels = 0
+    mean_angle_error = 0.0
+    total_pixels = 0.0
 
     for j in range(batch_size):     
         # print(tf.reduce_max(output[j,:,:,:]))   
@@ -294,7 +294,7 @@ with train_graph.as_default():
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
-        total_pixels += tf.count_nonzero(bmask)
+        total_pixels += 1.0 * tf.count_nonzero(bmask)
         
         a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
         a22 = tf.boolean_mask(tf.reduce_sum(norm*norm, axis=2),bmask)
@@ -307,7 +307,8 @@ with train_graph.as_default():
         # angle_error = tf.acos(cos_dist)
         mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
-    cost = mean_angle_error*1.0 / tf.cast(total_pixels,tf.float32)
+    cost = mean_angle_error / total_pixels
+
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
 
@@ -327,13 +328,15 @@ with tf.Session(graph=train_graph) as sess:
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
-                train_color[counter,:,:,:] = readimage('./train/color', i)/255.0
-                train_mask[counter,:,:,0] = readmask('./train/mask', i)/255.0
-                train_mask[counter,:,:,1] = readmask('./train/mask', i)/255.0
-                train_mask[counter,:,:,2] = readmask('./train/mask', i)/255.0
-                train_normal[counter,:,:,:] = readimage('./train/normal', i)/255.0
+                train_color[counter,:,:,:] = readimage('./train/color', i)
+                train_mask[counter,:,:,0] = readmask('./train/mask', i)
+                train_mask[counter,:,:,1] = readmask('./train/mask', i)
+                train_mask[counter,:,:,2] = readmask('./train/mask', i)
+                train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 counter += 1
-            
+            train_color /= 255.0
+            train_mask /= 255.0
+            train_normal /= 255.0
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
             los += c
             num_batches += 1
@@ -348,20 +351,22 @@ with tf.Session(graph=train_graph) as sess:
                 for index in get_batches(test,batch_size):
                     counter = 0
                     for k in index:
-                        validation_color[counter,:,:,:] = readimage('./train/color', k)/255.0
-                        validation_mask[counter,:,:,0] = readmask('./train/mask', k)/255.0
-                        validation_mask[counter,:,:,1] = readmask('./train/mask', k)/255.0
-                        validation_mask[counter,:,:,2] = readmask('./train/mask', k)/255.0
-                        validation_normal[counter,:,:,:] = readimage('./train/normal', k)/255.0
+                        validation_color[counter,:,:,:] = readimage('./train/color', k)
+                        validation_mask[counter,:,:,0] = readmask('./train/mask', k)
+                        validation_mask[counter,:,:,1] = readmask('./train/mask', k)
+                        validation_mask[counter,:,:,2] = readmask('./train/mask', k)
+                        validation_normal[counter,:,:,:] = readimage('./train/normal', k)
                         counter += 1
-                    
+                    validation_color /= 255.0
+                    validation_mask /= 255.0
+                    validation_normal /= 255.0
                     vc = sess.run(cost, feed_dict={x: validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
                 print('Avg validation loss: {:.3f}/{:.1f}|{:.3f}'.format(vlos/valid_batches,valid_batches,np.arccos(-vlos/valid_batches)))
-                if vlos < min_loss_so_far:
-                    min_loss_so_far = vlos
-                    tf.train.Saver().save(sess, './best_model')
-                    print('best model saved!\n')
+                # if vlos < min_loss_so_far:
+                #     min_loss_so_far = vlos
+                #     tf.train.Saver().save(sess, './best_model')
+                #     print('best model saved!\n')
 
         # if e % 1 == 0:
                 print('generate validation the picture')
