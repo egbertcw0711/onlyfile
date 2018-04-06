@@ -310,7 +310,7 @@ with train_graph.as_default():
         # angle_error = tf.acos(cos_dist)
         mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
-    cost = mean_angle_error / total_pixels
+    cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
 
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
