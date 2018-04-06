@@ -245,12 +245,12 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
         a22 = np.sum(groundtruth * groundtruth, axis=2)[mask]
         a12 = np.sum(prediction * groundtruth, axis=2)[mask]
 
-        cos_dist = a12 / np.sqrt(a11 * a22)
-        cos_dist[np.isnan(cos_dist)] = -1
+        cos_dist = -1.0*a12 / np.sqrt(a11 * a22)
+        # cos_dist[np.isnan(cos_dist)] = -1
         cos_dist = np.clip(cos_dist, -1, 1)
 
         # angle_error = np.arccos(cos_dist)
-        mean_angle_error -= np.sum(cos_dist)
+        mean_angle_error += np.sum(cos_dist)
 
     return mean_angle_error / total_pixels
 
@@ -310,11 +310,11 @@ with train_graph.as_default():
         a22 = tf.boolean_mask(tf.reduce_sum(norm*norm, axis=2),bmask)
         a12 = tf.boolean_mask(tf.reduce_sum(prediction*norm, axis=2),bmask)
 
-        cos_dist = a12 / tf.sqrt(a11 * a22)
+        cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
         # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
-        # cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
+        cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
         # angle_error = tf.acos(cos_dist)
-        mean_angle_error = mean_angle_error - 1.0*tf.reduce_sum(cos_dist) # -1 the best
+        mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
 
@@ -333,7 +333,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 1
+        every = 10
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -344,17 +344,18 @@ with tf.Session(graph=train_graph) as sess:
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 counter += 1
             train_color /= 255.0
+            # print(max(train_color))
             train_mask /= 255.0
             train_normal /= 255.0
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
             los += c
             num_batches += 1
-            if num_batches % every == 0:
+            if num_batches % 1 == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
                       'Avg {} batch(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.pi-np.arccos(los/every)))
                 los = 0
 
-            if num_batches % 2 == 0:
+            if num_batches % every == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 for index in get_batches(test,batch_size):
@@ -385,8 +386,10 @@ with tf.Session(graph=train_graph) as sess:
                     valid_mask[0,:,:,0] = readmask('./train/mask', k)
                     valid_mask[0,:,:,1] = readmask('./train/mask', k)
                     valid_mask[0,:,:,2] = readmask('./train/mask', k)
+                    valid_color /= 255.0
+                    valid_mask /= 255.0
                     result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-                    image=Image.fromarray((255*result).astype(np.uint8)[0])
+                    image=Image.fromarray((result).astype(np.uint8)[0])
                     image.save('./train/pred/'+str(k)+'.png')
                     cnt += 1
                     if cnt % 100 == 0:
