@@ -389,7 +389,7 @@ with tf.Session(graph=train_graph) as sess:
                     valid_color /= 255.0
                     valid_mask /= 255.0
                     result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask})
-                    image=Image.fromarray((result).astype(np.uint8)[0])
+                    image=Image.fromarray((255*result).astype(np.uint8)[0])
                     image.save('./train/pred/'+str(k)+'.png')
                     cnt += 1
                     if cnt % 100 == 0:
