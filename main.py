@@ -119,7 +119,7 @@ def buildModel(x,keep_prob):
     wh0 = weight_variable([3,3,3,16])
     bh0 = bias_variable([16])
     convH = tf.nn.relu(conv2d(x, wh0) + bh0)
-    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
+    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 16
     #
     convA = hourglass(convH,16,32,12,1,3,5,7,keep_prob)
     # print(convA.shape) # 128 x 128 x 64
@@ -313,14 +313,42 @@ with train_graph.as_default():
     keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    output = buildModel(x,keep_prob)
-    # w1 = weight_variable([3,3,3,512])
-    # b1 = bias_variable([512])
-    # conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    # output = buildModel(x,keep_prob)
 
-    # w2 = weight_variable([1,1,512,3])
-    # b2 = bias_variable([3])
-    # output = tf.nn.relu(conv2d(conv1,w2)+b2,name='output')
+    ## conv1 layer ##
+    W_conv1 = weight_variable([3,3,3,64]) # patch 3x3, in size 1, out size 128
+    b_conv1 = bias_variable([64])
+    h_conv1 = tf.nn.relu(conv2d(color_image, W_conv1) + b_conv1) # output size 128x128x128 
+    print("conv1 == ", h_conv1.get_shape())                                      
+
+    ## conv2 layer ##
+    W_conv2 = weight_variable([3,3, 64, 128]) # patch 3x3, in size 128, out size 256
+    b_conv2 = bias_variable([128])
+    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2) + b_conv2) # output size 128x128x256
+    print("conv2 == ", h_conv2.get_shape())  
+
+    ## conv3 layer ##
+    W_conv3 = weight_variable([3,3, 128, 128]) # patch 3x3, in size 256, out size 256
+    b_conv3 = bias_variable([128])
+    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3) + b_conv3) # output size 128x128x256
+    print("conv3 == ", h_conv3.get_shape())  
+
+    ## conv4 layer ##
+    W_conv4 = weight_variable([3,3, 128, 64]) # patch 3x3, in size 256, out size 128
+    b_conv4 = bias_variable([64])
+    h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4) + b_conv4) # output size 128x128x128
+    print("conv4 == ", h_conv4.get_shape())  
+
+    ## conv5 layer ##
+    W_conv5 = weight_variable([3,3, 64, 32]) # patch 3x3, in size 256, out size 128
+    b_conv5 = bias_variable([32])
+    h_conv5 = tf.nn.relu(conv2d(h_conv4, W_conv5) + b_conv5) # output size 128x128x128
+    print("conv4 == ", h_conv5.get_shape())  
+
+    ## conv5 layer ##
+    W_conv6 = weight_variable([3,3, 32, 3]) # patch 3x3, in size 128, out size 3
+    b_conv6 = bias_variable([3])
+    output = tf.nn.relu(conv2d(h_conv5, W_conv6) + b_conv6,name='output') # output size 128x128x3
 
     loss = 0
     for j in range(batch_size):
