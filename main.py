@@ -121,19 +121,19 @@ def buildModel(x,keep_prob):
     convH = tf.nn.relu(conv2d(x, wh0) + bh0)
     # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
     #
-    convA = hourglass(convH,16,32,20,1,3,5,7,keep_prob)
+    convA = hourglass(convH,16,32,12,1,3,5,7,keep_prob)
     # print(convA.shape) # 128 x 128 x 64
     [dummybatch,height4,width4,depth4] = convA.shape
     #
     #
     convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_1 = hourglass(convB_maxpool,32,32,20,1,3,5,7,keep_prob)
-    convB_2 = hourglass(convB_1,32,32,20,1,3,5,7,keep_prob)
+    convB_1 = hourglass(convB_maxpool,32,32,12,1,3,5,7,keep_prob)
+    convB_2 = hourglass(convB_1,32,32,12,1,3,5,7,keep_prob)
     # print(convB_2.shape) # 64 x 64 x 128
 
     # ##
-    convB_3 = hourglass(convB_2,32,32,20,1,3,5,7,keep_prob)
-    convC = hourglass(convB_3,32,32,20,1,3,5,7,keep_prob)
+    convB_3 = hourglass(convB_2,32,32,12,1,3,5,7,keep_prob)
+    convC = hourglass(convB_3,32,32,12,1,3,5,7,keep_prob)
     # convC = convB_3
     # # convC = tf.nn.dropout(convC,keep_prob=keep_prob)
     # # print(convC.shape) # 64 x 64 x 128
@@ -141,8 +141,8 @@ def buildModel(x,keep_prob):
     # ##
     # ##
     convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_4 = hourglass(convB_maxpool_2,32,32,20,1,3,5,7,keep_prob)
-    convD = hourglass(convB_4,32,32,20,1,3,5,7,keep_prob)
+    convB_4 = hourglass(convB_maxpool_2,32,32,12,1,3,5,7,keep_prob)
+    convD = hourglass(convB_4,32,32,12,1,3,5,7,keep_prob)
     # convD = convB_4
     # print(convD.shape) # 32 x 32 x 256
     ##
@@ -198,12 +198,12 @@ def buildModel(x,keep_prob):
     # #print(convF_3.shape)
     # ###
     ##
-    convE_11 = hourglass(convF_3,32,32,20,1,3,5,7,keep_prob)
-    convG = hourglass(convE_11,32,32,20,1,3,5,7,keep_prob)
+    convE_11 = hourglass(convF_3,32,32,12,1,3,5,7,keep_prob)
+    convG = hourglass(convE_11,32,32,12,1,3,5,7,keep_prob)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
-    convB_5 = hourglass(convG_2,32,32,20,1,3,5,7,keep_prob)  
+    convB_5 = hourglass(convG_2,32,32,12,1,3,5,7,keep_prob)  
     # convB_5 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob) ## changed
     convA_2 = hourglass(convB_5,32,16,8,1,3,7,11,keep_prob)
     ##
