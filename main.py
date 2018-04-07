@@ -140,7 +140,7 @@ def buildModel(x,keep_prob):
     convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
     convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7)
     convB_4 = tf.nn.dropout(convB_4,keep_prob=keep_prob)
-    # convD = hourglass(convB_4,128,256,32,1,3,5,7)
+    convD = hourglass(convB_4,128,256,32,1,3,5,7)
     convD = convB_4
     # convD = tf.nn.dropout(convD,keep_prob=keep_prob)
     # print(convD.shape) # 32 x 32 x 256
@@ -198,8 +198,7 @@ def buildModel(x,keep_prob):
     ###
     ##
     convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
-    # convG = hourglass(convE_11,256,128,32,1,3,5,7)
-    convG = convE_11
+    convG = hourglass(convE_11,256,128,32,1,3,5,7)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
