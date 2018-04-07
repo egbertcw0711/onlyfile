@@ -30,7 +30,7 @@ def normalize(x):
     for i in range(3):
         max_val = np.max(x[:,:,i])
         min_val = np.min(x[:,:,i])
-        res[:,:,i] = np.divide((x[:,:,i] - min_val),max_val - min_val)
+        res[:,:,i] = np.divide((x[:,:,i] - min_val),max_val - min_val+1)
     return res
 
 def weight_variable(shape):
@@ -358,17 +358,14 @@ with tf.Session(graph=train_graph) as sess:
                 train_mask[counter,:,:,2] = readmask('./train/mask', i)
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 
-                # train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
-                # train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
-                # train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
-                train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:])
-                train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:])
-                train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:])
+                train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
+                train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
+                train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
+                # train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
+                # train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
+                # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
                 counter += 1
-            # train_color /= 255.0
-            # train_mask /= 255.0
-            # train_normal /= 255.0
-            # print(train_color.shape)
+
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
             los += c
             num_batches += 1
@@ -383,7 +380,6 @@ with tf.Session(graph=train_graph) as sess:
                 div = 0
                 for index in get_batches(test,batch_size):
                     cnt = 0
-                    # print(div)
                     for k in index:
                         validation_color[cnt,:,:,:] = readimage('./train/color', k)
                         validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
@@ -391,12 +387,12 @@ with tf.Session(graph=train_graph) as sess:
                         validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
                         validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
-                        # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-                        # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-                        # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-                        validation_color[cnt,:,:,:] /= np.amax(validation_color[cnt,:,:,:])
-                        validation_mask[cnt,:,:,:] /= np.amax(validation_mask[cnt,:,:,:])
-                        validation_normal[cnt,:,:,:] /= np.amax(validation_normal[cnt,:,:,:])
+                        validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+                        validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+                        validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+                        # validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
+                        # validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
+                        # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
                         cnt += 1
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
@@ -412,10 +408,10 @@ with tf.Session(graph=train_graph) as sess:
                 # print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
                 print(valid)
-                # if vlos < min_loss_so_far:
-                #     min_loss_so_far = vlos
-                #     tf.train.Saver().save(sess, './best_model')
-                #     print('best model saved!\n')
+                if valid < min_loss_so_far:
+                    min_loss_so_far = valid
+                    tf.train.Saver().save(sess, './best_model/surface_normal_est')
+                    print('best model saved!\n')
 
         # if e % 1 == 0:
                 # print('generate validation the picture')
@@ -444,25 +440,58 @@ with tf.Session(graph=train_graph) as sess:
                 # print(valid)
 
 
-    num_test = len(glob.glob('./test/color/*.png'))
-    test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    cnt = 1
-    for k in range(num_test):
-        test_color[0,:,:,:] = readimage('./test/color', k)
-        test_mask[0,:,:,0] = readmask('./test/mask', k)
-        test_mask[0,:,:,1] = readmask('./test/mask', k)
-        test_mask[0,:,:,2] = readmask('./test/mask', k)
+    # num_test = len(glob.glob('./test/color/*.png'))
+    # test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
+    # for k in range(num_test):
+    #     test_color[0,:,:,:] = readimage('./test/color', k)
+    #     test_mask[0,:,:,0] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,1] = readmask('./test/mask', k)
+    #     test_mask[0,:,:,2] = readmask('./test/mask', k)
 
-        test_color = normalize(test_color)
-        test_mask = normalize(test_mask)
+    #     test_color[0,:,:,:] /= np.amax(test_color[cnt,:,:,:])
+    #     test_mask[0,:,:,:] /= np.amax(test_mask[cnt,:,:,:])
+      
+    #     # test_color = normalize(test_color)
+    #     # test_mask = normalize(test_mask)
 
-        result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
-        # imgio = np.reshape(result,[128,128,3])
-        # pth = './test/normal/'+str(k)+'.png'
-        # scipy.misc.imsave(pth,imgio)
-        image=Image.fromarray((255.0*result).astype(np.uint8)[0])
-        image.save('./test/normal/'+str(k)+'.png','png')
-        if cnt % 100 == 0:
-            print('generate',cnt,'normal')
-        cnt += 1
+    #     # result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
+    #     # image=Image.fromarray((255.0*result).astype(np.uint8)[0])
+    #     # image.save('./test/normal/'+str(k)+'.png','png')
+    #     # if cnt % 100 == 0:
+    #     #     print('generate',cnt,'normal')
+    #     # cnt += 1
+    #     vlos = 0
+    #     valid_batches = len(test) // batch_size
+    #     div = 0
+    #     for index in get_batches(test,batch_size):
+    #         cnt = 0
+    #         # print(div)
+    #         for k in index:
+    #             validation_color[cnt,:,:,:] = readimage('./train/color', k)
+    #             validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
+    #             validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
+    #             validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
+    #             validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
+                
+    #             # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+    #             # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+    #             # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+    #             validation_color[cnt,:,:,:] /= np.amax(validation_color[cnt,:,:,:])
+    #             validation_mask[cnt,:,:,:] /= np.amax(validation_mask[cnt,:,:,:])
+    #             validation_normal[cnt,:,:,:] /= np.amax(validation_normal[cnt,:,:,:])
+    #             cnt += 1
+
+    #         vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
+    #         vlos += vc
+    #         # print(results.shape)
+    #         tmp = 0
+    #         for k in index:
+    #             image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
+    #             image.save('./train/pred/'+str(k)+'.png')
+    #             tmp += 1
+    #         # print('end of one idex')
+    #         div += 1
+    #     # print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
+    #     valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+    #     print(valid)
