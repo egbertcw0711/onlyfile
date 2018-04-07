@@ -103,7 +103,7 @@ def hourglass(inputs, in_dim, out_dim, inter_dim, conv1_size, conv2_size, conv3_
     return res
 
 
-def buildModel(x):
+def buildModel(x,keep_prob):
     """
     build the stacked hourglass net model
     x: inputs 128 x 128 x 3
@@ -115,42 +115,55 @@ def buildModel(x):
     # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
     #
     convA = hourglass(convH,128,64,64,1,3,7,11)
+    # convA = tf.nn.dropout(convA,keep_prob=keep_prob)
     # print(convA.shape) # 128 x 128 x 64
     [dummybatch,height4,width4,depth4] = convA.shape
     #
     #
     convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
     convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7)
-    convB_2 = hourglass(convB_1,128,128,32,1,3,5,7)
+    convB_2 = tf.nn.dropout(convB_1,keep_prob=keep_prob)
+    convB_2 = hourglass(convB_2,128,128,32,1,3,5,7)
+    # convB_2 = tf.nn.dropout(convB_2,keep_prob=keep_prob)
     # print(convB_2.shape) # 64 x 64 x 128
 
     ##
     convB_3 = hourglass(convB_2,128,128,32,1,3,5,7)
+    # convB_3 = tf.nn.dropout(convB_3,keep_prob=keep_prob)
     convC = hourglass(convB_3,128,128,64,1,3,7,11)
+    convC = tf.nn.dropout(convC,keep_prob=keep_prob)
     # print(convC.shape) # 64 x 64 x 128
     [dummybatch,height3,width3,depth3] = convC.shape
     ##
     ##
     convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
     convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7)
+    convB_4 = tf.nn.dropout(convB_4,keep_prob=keep_prob)
     convD = hourglass(convB_4,128,256,32,1,3,5,7)
+    # convD = tf.nn.dropout(convD,keep_prob=keep_prob)
     # print(convD.shape) # 32 x 32 x 256
     ##
     ###
-    convE = hourglass(convD,256,256,32,1,3,5,7) 
+    convE = hourglass(convD,256,256,32,1,3,5,7)
+    convE = tf.nn.dropout(convE,keep_prob=keep_prob) 
     convF = hourglass(convE,256,256,64,1,3,7,11)
+    # convF = tf.nn.dropout(convF,keep_prob=keep_prob)
     # print(convF.shape) # 32 x 32 x 256
     [dummybatch,height2,width2,depth2] = convF.shape
     ###
     ###
     convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='SAME')
     convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7)
+    # convE_2 = tf.nn.dropout(convE_2,keep_prob=keep_prob)
     convE_3 = hourglass(convE_2,256,256,32,1,3,5,7)
+    # convE_3 = tf.nn.dropout(convE_3,keep_prob=keep_prob)
     # print(convE_3.shape) # 16 x 16 x 256
     ###
     ####
     convE_4 = hourglass(convE_3,256,256,32,1,3,5,7)
+    convE_4 = tf.nn.dropout(convE_4,keep_prob=keep_prob)
     convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
+    # convE_5 = tf.nn.dropout(convE_5,keep_prob=keep_prob)
     # print(convE_5.shape) # 16 x 16 x 256
     [dummybatch,height,width,depth] = convE_5.shape
     ####
@@ -158,7 +171,9 @@ def buildModel(x):
     convE_3_maxpool = tf.nn.max_pool(convE_3,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
     convE_6 = hourglass(convE_3_maxpool,256,256,32,1,3,5,7)
     convE_7 = hourglass(convE_6,256,256,32,1,3,5,7)
+    convE_7 = tf.nn.dropout(convE_7,keep_prob=keep_prob)
     convE_8 = hourglass(convE_7,256,256,32,1,3,5,7)
+    # convE_8 = tf.nn.dropout(convE_8,keep_prob=keep_prob)
     # print(convE_8.shape) # 8 x 8 x 256
     ####
     ####
@@ -169,6 +184,7 @@ def buildModel(x):
     ###
     convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
     convF_2 = hourglass(convE_10,256,256,64,1,3,7,11)
+    # convF_2 = tf.nn.dropout(convF_2,keep_prob=keep_prob)
     upsample_3 = tf.image.resize_nearest_neighbor(convF_2,[height2,width2])
     convF_3 = tf.add(upsample_3,convF)
     #print(convF_3.shape)
@@ -180,6 +196,7 @@ def buildModel(x):
     convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
     convB_5 = hourglass(convG_2,128,128,32,1,3,5,7)
+    convB_5 = tf.nn.dropout(convB_5,keep_prob=keep_prob)
     convA_2 = hourglass(convB_5,128,64,64,1,3,7,11)
     ##
     #
@@ -189,7 +206,7 @@ def buildModel(x):
     #
     wh1 = weight_variable([3,3,64,3])
     bh1 = bias_variable([3])
-    convH_2 = tf.nn.relu(conv2d(convA_3, wh1) + bh1)
+    convH_2 = tf.nn.relu(conv2d(convA_3, wh1)+bh1,name='output')
     return convH_2
 
 def train_test_split(random_indexes,validation_size):
@@ -285,15 +302,17 @@ with train_graph.as_default():
     x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
     y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
     z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
+    keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
-    # output = buildModel(x)
-    w1 = weight_variable([3,3,3,512])
-    b1 = bias_variable([512])
-    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
 
-    w2 = weight_variable([1,1,512,3])
-    b2 = bias_variable([3])
-    output = tf.nn.relu(conv2d(conv1,w2)+b2,name='output')
+    output = buildModel(x,keep_prob)
+    # w1 = weight_variable([3,3,3,512])
+    # b1 = bias_variable([512])
+    # conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+
+    # w2 = weight_variable([1,1,512,3])
+    # b2 = bias_variable([3])
+    # output = tf.nn.relu(conv2d(conv1,w2)+b2,name='output')
 
     loss = 0
     for j in range(batch_size):
@@ -362,7 +381,8 @@ with tf.Session(graph=train_graph) as sess:
                 # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
                 counter += 1
 
-            c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal})
+            c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
+             keep_prob:0.5})
             los += c
             num_batches += 1
             if num_batches % every == 0:
@@ -370,7 +390,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 30 == 0:
+            if num_batches % 300 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
@@ -391,7 +411,8 @@ with tf.Session(graph=train_graph) as sess:
                         # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
                         cnt += 1
 
-                    vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
+                    vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
+                        z: validation_normal, keep_prob:1.0})
                     vlos += vc
 
                     tmp = 0
