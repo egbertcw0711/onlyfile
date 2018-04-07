@@ -238,6 +238,20 @@ def scan_png_files(folder):
 
     return ret
 
+def evaluation(prediction, mask, normal):
+	#pic_num = prediction.get_shape()[0]
+	pic_num = choose_num
+	print("pic_num=",pic_num)
+	loss = 0
+	prediction = prediction / 255.0
+	print("scalar")
+	normal = normal / 255.0
+	nor = normal*mask
+	pre = prediction*mask
+	for pn in range(0,pic_num):
+		for cha in range(0,3):
+			loss += tf.norm(nor[pn,:,:,cha] - pre[pn,:,:,cha])
+	return loss/choose_num
 
 def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     '''
@@ -318,7 +332,7 @@ with train_graph.as_default():
     ## conv1 layer ##
     W_conv1 = weight_variable([3,3,3,64]) # patch 3x3, in size 1, out size 128
     b_conv1 = bias_variable([64])
-    h_conv1 = tf.nn.relu(conv2d(color_image, W_conv1) + b_conv1) # output size 128x128x128 
+    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1) # output size 128x128x128 
     print("conv1 == ", h_conv1.get_shape())                                      
 
     ## conv2 layer ##
@@ -351,10 +365,14 @@ with train_graph.as_default():
     output = tf.nn.relu(conv2d(h_conv5, W_conv6) + b_conv6,name='output') # output size 128x128x3
 
     loss = 0
-    for j in range(batch_size):
-        mask = y[j,:,:,:]
-        mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        loss += tf.reduce_mean(tf.boolean_mask(tf.abs(output[j,:,:,:]-z[j,:,:,:]),mask_region))
+    loss = evaluation(output,y,z)
+    # for j in range(batch_size):
+    #     mask = y[j,:,:,:]
+    #     mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+        
+    #     loss += tf.reduce_mean(tf.boolean_mask(tf.abs(output[j,:,:,:]-z[j,:,:,:]),mask_region))
+
+    
     # mean_angle_error = 0.0
     # total_pixels = 0
 
@@ -409,9 +427,9 @@ with tf.Session(graph=train_graph) as sess:
                 train_mask[counter,:,:,2] = readmask('./train/mask', i)
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 
-                train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
-                train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
-                train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
+                # train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
+                # train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
+                # train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
                 # train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
                 # train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
                 # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
@@ -439,9 +457,9 @@ with tf.Session(graph=train_graph) as sess:
                         validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
                         validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
-                        validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-                        validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-                        validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+                        # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+                        # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+                        # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
                         # validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
                         # validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
                         # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
