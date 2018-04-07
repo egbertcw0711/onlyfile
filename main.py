@@ -25,19 +25,18 @@ def readnormal(folder, index):
     return image
 
 def normalize(x):
-    # print(x.shape)
     res = np.zeros(x.shape)
     for i in range(3):
-        max_val = np.max(x[:,:,i])
-        min_val = np.min(x[:,:,i])
-        res[:,:,i] = np.divide((x[:,:,i] - min_val),max_val - min_val+1)
+        max_val = np.amax(x[:,:,i])
+        min_val = np.amin(x[:,:,i])
+        res[:,:,i] = 1.0*(x[:,:,i]-min_val)/(max_val-min_val+1.0)
     return res
 
 def weight_variable(shape):
     """
     init the weight variables with truncated normal distribution
     """
-    initial = tf.truncated_normal(shape,stddev=0.1)
+    initial = tf.truncated_normal(shape,stddev=0.05)
     return tf.Variable(initial)
 
 def bias_variable(shape):
@@ -56,7 +55,7 @@ def conv2d(x,w):
     
     return: output(h x w x num_filters)
     """
-    return tf.nn.conv2d(x,w,strides=[1,1,1,1], padding = 'SAME')
+    return tf.nn.conv2d(x,w,strides=[1,1,1,1], padding='SAME')
 
 def hourglass(inputs, in_dim, out_dim, inter_dim, conv1_size, conv2_size, conv3_size, conv4_size):
     """
@@ -280,15 +279,12 @@ validation_normal = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 valid_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
 valid_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
 
-#nvn = np.zeros(shape=(128,128,3),dtype='float32')
-#nvp = np.zeros(shape=(128,128,3),dtype='float32')
-
 # build the graph
 train_graph = tf.Graph()
 with train_graph.as_default():
-    x = tf.placeholder(tf.float32,[None, 128,128,3]) # color
-    y = tf.placeholder(tf.float32,[None, 128,128,3]) # mask
-    z = tf.placeholder(tf.float32,[None, 128,128,3]) # normal labels
+    x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
+    y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
+    z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
 
     # output = buildModel(x)
     w1 = weight_variable([3,3,3,512])
@@ -297,7 +293,7 @@ with train_graph.as_default():
 
     w2 = weight_variable([1,1,512,3])
     b2 = bias_variable([3])
-    output = tf.nn.relu(conv2d(conv1,w2)+b2)
+    output = tf.nn.relu(conv2d(conv1,w2)+b2,name='output')
 
     loss = 0
     for j in range(batch_size):
@@ -397,7 +393,7 @@ with tf.Session(graph=train_graph) as sess:
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
                     vlos += vc
-                    # print(results.shape)
+
                     tmp = 0
                     for k in index:
                         image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
@@ -412,86 +408,3 @@ with tf.Session(graph=train_graph) as sess:
                     min_loss_so_far = valid
                     tf.train.Saver().save(sess, './best_model/surface_normal_est')
                     print('best model saved!\n')
-
-        # if e % 1 == 0:
-                # print('generate validation the picture')
-                # cnt = 1
-                # for k in test:
-                #     valid_color[0,:,:,:] = readimage('./train/color', k)
-                #     valid_mask[0,:,:,0] = readmask('./train/mask', k)
-                #     valid_mask[0,:,:,1] = readmask('./train/mask', k)
-                #     valid_mask[0,:,:,2] = readmask('./train/mask', k)
-                #     # valid_color /= 255.0
-                #     # valid_mask /= 255.0
-                #     valid_color[0,:,:,:] = normalize(valid_color[0,:,:,:])
-                #     valid_mask[0,:,:,:] = normalize(valid_mask[0,:,:,:])
-                #     # print(np.amax(valid_color[0,:,:,:]),np.amin(valid_mask[0,:,:,:]))
-                #     result = sess.run(output, feed_dict = {x: valid_color, y:valid_mask[0,:,:,:]})
-                #     # print(result[0,:,:,:].shape)
-                #     # print(np.amax(result),np.amin(result[0,:,:,:]))
-                #     # scipy.misc.imsave('./train/pred'+str(k)+'.png',result[0])
-                #     image=Image.fromarray((255.0*result[0,:,:,:]).astype(np.uint8))
-                #     # print(image.shape)
-                #     image.save('./train/pred/'+str(k)+'.png')
-                #     cnt += 1
-                #     if cnt % 100 == 0:
-                #         print('generate',cnt,'pictures')
-                # valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-                # print(valid)
-
-
-    # num_test = len(glob.glob('./test/color/*.png'))
-    # test_color = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    # test_mask = np.zeros(shape = (1,128,128,3), dtype = 'float32')
-    # for k in range(num_test):
-    #     test_color[0,:,:,:] = readimage('./test/color', k)
-    #     test_mask[0,:,:,0] = readmask('./test/mask', k)
-    #     test_mask[0,:,:,1] = readmask('./test/mask', k)
-    #     test_mask[0,:,:,2] = readmask('./test/mask', k)
-
-    #     test_color[0,:,:,:] /= np.amax(test_color[cnt,:,:,:])
-    #     test_mask[0,:,:,:] /= np.amax(test_mask[cnt,:,:,:])
-      
-    #     # test_color = normalize(test_color)
-    #     # test_mask = normalize(test_mask)
-
-    #     # result = sess.run(output, feed_dict = {x:test_color,y:test_mask})
-    #     # image=Image.fromarray((255.0*result).astype(np.uint8)[0])
-    #     # image.save('./test/normal/'+str(k)+'.png','png')
-    #     # if cnt % 100 == 0:
-    #     #     print('generate',cnt,'normal')
-    #     # cnt += 1
-    #     vlos = 0
-    #     valid_batches = len(test) // batch_size
-    #     div = 0
-    #     for index in get_batches(test,batch_size):
-    #         cnt = 0
-    #         # print(div)
-    #         for k in index:
-    #             validation_color[cnt,:,:,:] = readimage('./train/color', k)
-    #             validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
-    #             validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
-    #             validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
-    #             validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
-                
-    #             # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-    #             # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-    #             # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-    #             validation_color[cnt,:,:,:] /= np.amax(validation_color[cnt,:,:,:])
-    #             validation_mask[cnt,:,:,:] /= np.amax(validation_mask[cnt,:,:,:])
-    #             validation_normal[cnt,:,:,:] /= np.amax(validation_normal[cnt,:,:,:])
-    #             cnt += 1
-
-    #         vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
-    #         vlos += vc
-    #         # print(results.shape)
-    #         tmp = 0
-    #         for k in index:
-    #             image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
-    #             image.save('./train/pred/'+str(k)+'.png')
-    #             tmp += 1
-    #         # print('end of one idex')
-    #         div += 1
-    #     # print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
-    #     valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-    #     print(valid)
