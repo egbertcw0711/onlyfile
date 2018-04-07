@@ -116,24 +116,24 @@ def buildModel(x,keep_prob):
     x: inputs 128 x 128 x 3
     return: outputs of the model 128 x 128 x 3
     """
-    wh0 = weight_variable([3,3,3,128])
-    bh0 = bias_variable([128])
+    wh0 = weight_variable([3,3,3,16])
+    bh0 = bias_variable([16])
     convH = tf.nn.relu(conv2d(x, wh0) + bh0)
-    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
+    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 16
     #
-    convA = hourglass(convH,128,64,64,1,3,7,11,keep_prob)
+    convA = hourglass(convH,16,32,12,1,3,5,7,keep_prob)
     # print(convA.shape) # 128 x 128 x 64
     [dummybatch,height4,width4,depth4] = convA.shape
     #
     #
     convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7,keep_prob)
-    convB_2 = hourglass(convB_1,128,128,32,1,3,5,7,keep_prob)
+    convB_1 = hourglass(convB_maxpool,32,32,12,1,3,5,7,keep_prob)
+    convB_2 = hourglass(convB_1,32,32,12,1,3,5,7,keep_prob)
     # print(convB_2.shape) # 64 x 64 x 128
 
     # ##
-    convB_3 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
-    convC = hourglass(convB_3,128,128,64,1,3,7,11,keep_prob)
+    convB_3 = hourglass(convB_2,32,32,12,1,3,5,7,keep_prob)
+    convC = hourglass(convB_3,32,32,12,1,3,5,7,keep_prob)
     # convC = convB_3
     # # convC = tf.nn.dropout(convC,keep_prob=keep_prob)
     # # print(convC.shape) # 64 x 64 x 128
@@ -141,8 +141,8 @@ def buildModel(x,keep_prob):
     # ##
     # ##
     convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7,keep_prob)
-    convD = hourglass(convB_4,128,256,32,1,3,5,7,keep_prob)
+    convB_4 = hourglass(convB_maxpool_2,32,32,12,1,3,5,7,keep_prob)
+    convD = hourglass(convB_4,32,32,12,1,3,5,7,keep_prob)
     # convD = convB_4
     # print(convD.shape) # 32 x 32 x 256
     ##
@@ -198,21 +198,21 @@ def buildModel(x,keep_prob):
     # #print(convF_3.shape)
     # ###
     ##
-    convE_11 = hourglass(convF_3,256,256,32,1,3,5,7,keep_prob)
-    convG = hourglass(convE_11,256,128,32,1,3,5,7,keep_prob)
+    convE_11 = hourglass(convF_3,32,32,12,1,3,5,7,keep_prob)
+    convG = hourglass(convE_11,32,32,12,1,3,5,7,keep_prob)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
-    convB_5 = hourglass(convG_2,128,128,32,1,3,5,7,keep_prob)  
+    convB_5 = hourglass(convG_2,32,32,12,1,3,5,7,keep_prob)  
     # convB_5 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob) ## changed
-    convA_2 = hourglass(convB_5,128,64,64,1,3,7,11,keep_prob)
+    convA_2 = hourglass(convB_5,32,16,8,1,3,7,11,keep_prob)
     ##
     #
     upsample_1 = tf.image.resize_nearest_neighbor(convA_2,[height4,width4])
     convA_3 = tf.add(upsample_1,convA)
     #print(convA_3.shape)
     #
-    wh1 = weight_variable([3,3,64,3])
+    wh1 = weight_variable([3,3,16,3])
     bh1 = bias_variable([3])
     convH_2 = tf.nn.relu(conv2d(convA_3, wh1)+bh1,name='output')
     return convH_2
@@ -313,14 +313,42 @@ with train_graph.as_default():
     keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    output = buildModel(x,keep_prob)
-    # w1 = weight_variable([3,3,3,512])
-    # b1 = bias_variable([512])
-    # conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    # output = buildModel(x,keep_prob)
 
-    # w2 = weight_variable([1,1,512,3])
-    # b2 = bias_variable([3])
-    # output = tf.nn.relu(conv2d(conv1,w2)+b2,name='output')
+    ## conv1 layer ##
+    W_conv1 = weight_variable([3,3,3,64]) # patch 3x3, in size 1, out size 128
+    b_conv1 = bias_variable([64])
+    h_conv1 = tf.nn.relu(conv2d(color_image, W_conv1) + b_conv1) # output size 128x128x128 
+    print("conv1 == ", h_conv1.get_shape())                                      
+
+    ## conv2 layer ##
+    W_conv2 = weight_variable([3,3, 64, 128]) # patch 3x3, in size 128, out size 256
+    b_conv2 = bias_variable([128])
+    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2) + b_conv2) # output size 128x128x256
+    print("conv2 == ", h_conv2.get_shape())  
+
+    ## conv3 layer ##
+    W_conv3 = weight_variable([3,3, 128, 128]) # patch 3x3, in size 256, out size 256
+    b_conv3 = bias_variable([128])
+    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3) + b_conv3) # output size 128x128x256
+    print("conv3 == ", h_conv3.get_shape())  
+
+    ## conv4 layer ##
+    W_conv4 = weight_variable([3,3, 128, 64]) # patch 3x3, in size 256, out size 128
+    b_conv4 = bias_variable([64])
+    h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4) + b_conv4) # output size 128x128x128
+    print("conv4 == ", h_conv4.get_shape())  
+
+    ## conv5 layer ##
+    W_conv5 = weight_variable([3,3, 64, 32]) # patch 3x3, in size 256, out size 128
+    b_conv5 = bias_variable([32])
+    h_conv5 = tf.nn.relu(conv2d(h_conv4, W_conv5) + b_conv5) # output size 128x128x128
+    print("conv4 == ", h_conv5.get_shape())  
+
+    ## conv5 layer ##
+    W_conv6 = weight_variable([3,3, 32, 3]) # patch 3x3, in size 128, out size 3
+    b_conv6 = bias_variable([3])
+    output = tf.nn.relu(conv2d(h_conv5, W_conv6) + b_conv6,name='output') # output size 128x128x3
 
     loss = 0
     for j in range(batch_size):
