@@ -374,7 +374,7 @@ with tf.Session(graph=train_graph) as sess:
             num_batches += 1
             if num_batches % every == 0:
                 print('Epoch {}/{};'.format(e,epochs),'Batches {}/{};'.format(num_batches,len(train)//batch_size),\
-                      'Avg {} batch(es) training loss: {:.3f}|{:.3f}'.format(every,los/every,np.pi-np.arccos(los/every)))
+                      'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
             if num_batches % 30 == 0:
@@ -383,7 +383,7 @@ with tf.Session(graph=train_graph) as sess:
                 div = 0
                 for index in get_batches(test,batch_size):
                     cnt = 0
-                    print(div)
+                    # print(div)
                     for k in index:
                         validation_color[cnt,:,:,:] = readimage('./train/color', k)
                         validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
@@ -394,9 +394,9 @@ with tf.Session(graph=train_graph) as sess:
                         # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
                         # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
                         # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-                        validation_color[counter,:,:,:] /= np.amax(validation_color[counter,:,:,:])
-                        validation_mask[counter,:,:,:] /= np.amax(validation_mask[counter,:,:,:])
-                        validation_normal[counter,:,:,:] /= np.amax(validation_normal[counter,:,:,:])
+                        validation_color[cnt,:,:,:] /= np.amax(validation_color[cnt,:,:,:])
+                        validation_mask[cnt,:,:,:] /= np.amax(validation_mask[cnt,:,:,:])
+                        validation_normal[cnt,:,:,:] /= np.amax(validation_normal[cnt,:,:,:])
                         cnt += 1
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, z: validation_normal})
