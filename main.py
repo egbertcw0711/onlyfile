@@ -403,7 +403,7 @@ with train_graph.as_default():
 
     # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     # # cost += tf.reduce_mean(tf.boolean_mask(tf.abs(prediction-norm)))
-    cost = loss / batch_size
+    cost = loss
     opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
 
