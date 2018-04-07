@@ -132,21 +132,18 @@ def buildModel(x,keep_prob):
     # print(convB_2.shape) # 64 x 64 x 128
 
     # ##
-    # convB_3 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
-    # # convB_3 = tf.nn.dropout(convB_3,keep_prob=keep_prob)
-    # # convC = hourglass(convB_3,128,128,64,1,3,7,11)
+    convB_3 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
+    convC = hourglass(convB_3,128,128,64,1,3,7,11,keep_prob)
     # convC = convB_3
     # # convC = tf.nn.dropout(convC,keep_prob=keep_prob)
     # # print(convC.shape) # 64 x 64 x 128
-    # [dummybatch,height3,width3,depth3] = convC.shape
+    [dummybatch,height3,width3,depth3] = convC.shape
     # ##
     # ##
-    # convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    # convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7)
-    # convB_4 = tf.nn.dropout(convB_4,keep_prob=keep_prob)
-    # convD = hourglass(convB_4,128,256,32,1,3,5,7)
+    convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
+    convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7,keep_prob)
+    convD = hourglass(convB_4,128,256,32,1,3,5,7,keep_prob)
     # convD = convB_4
-    # convD = tf.nn.dropout(convD,keep_prob=keep_prob)
     # print(convD.shape) # 32 x 32 x 256
     ##
     # ###
@@ -201,13 +198,13 @@ def buildModel(x,keep_prob):
     # #print(convF_3.shape)
     # ###
     ##
-    # convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
-    # convG = hourglass(convE_11,256,128,32,1,3,5,7)
-    # upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
-    # convG_2 = tf.add(upsample_2,convC)
+    convE_11 = hourglass(convF_3,256,256,32,1,3,5,7,keep_prob)
+    convG = hourglass(convE_11,256,128,32,1,3,5,7,keep_prob)
+    upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
+    convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
-    # convB_5 = hourglass(convG_2,128,128,32,1,3,5,7)  ## changed
-    convB_5 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
+    convB_5 = hourglass(convG_2,128,128,32,1,3,5,7,keep_prob)  
+    # convB_5 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob) ## changed
     convA_2 = hourglass(convB_5,128,64,64,1,3,7,11,keep_prob)
     ##
     #
@@ -393,7 +390,7 @@ with tf.Session(graph=train_graph) as sess:
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
-             keep_prob:0.5})
+             keep_prob:1.0})
             los += c
             num_batches += 1
             if num_batches % every == 0:
@@ -401,7 +398,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 300 == 0:
+            if num_batches % 100 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
@@ -425,7 +422,6 @@ with tf.Session(graph=train_graph) as sess:
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
                         z: validation_normal, keep_prob:1.0})
                     vlos += vc
-                    print(vlos/valid_batches)
                     tmp = 0
                     for k in index:
                         image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
@@ -433,7 +429,7 @@ with tf.Session(graph=train_graph) as sess:
                         tmp += 1
                     # print('end of one idex')
                     div += 1
-                # print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
+                print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
                 print(valid)
                 if valid < min_loss_so_far:
