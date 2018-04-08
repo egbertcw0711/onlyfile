@@ -293,54 +293,49 @@ with train_graph.as_default():
     keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    # output = buildModel(x,keep_prob)
-    w1 = weight_variable([3,3,3,512])
-    b1 = bias_variable([512])
-    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
-    conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-    w2 = weight_variable([1,1,512,3])
-    b2 = bias_variable([3])
-    output = tf.nn.relu(conv2d(conv2,w2)+b2)
-    output = tf.nn.dropout(output,keep_prob=keep_prob,name='output')
+    output = buildModel(x,keep_prob)
+    # w1 = weight_variable([3,3,3,512])
+    # b1 = bias_variable([512])
+    # conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    # conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
+    # w2 = weight_variable([1,1,512,3])
+    # b2 = bias_variable([3])
+    # output = tf.nn.relu(conv2d(conv2,w2)+b2)
+    # output = tf.nn.dropout(output,keep_prob=keep_prob,name='output')
     
-    loss = 0
-    for j in range(batch_size):
-        mask = y[j,:,:,:]
-        mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        for chn in range(3):
-            loss += tf.reduce_mean(tf.boolean_mask(tf.square(output[j,:,:,chn]-z[j,:,:,chn]),mask_region[:,:,chn]))
-    # mean_angle_error = 0.0
-    # total_pixels = 0
-
+    # prediction  = output * y
+    # gt = z * y
+    # mask = tf.concat([y,y,y],axis=3)
+    mask_region = tf.not_equal(y,tf.zeros_like(y))
+    # loss = tf.reduce_mean(tf.boolean_mask(tf.abs(output-z),mask_region))
+    cost = tf.reduce_mean(tf.abs(output-z))
+    # cost = tf.reduce_mean(tf.square(prediction-gt))
+    # loss = tf.Variable(0.0)
+    # init = tf.initialize_all_variables()
+    # assign_op = loss.assign(0.0)
+    # sess = tf.InteractiveSession()
+    # sess.run(assign_op)
+    # print(loss.eval())
     # for j in range(batch_size):
-    #     # nvp = tf.norm(output[j,:,:,:],axis=2)
-    #     # nvn = tf.norm(z[j,:,:,:],axis=2)    
-    #     # nvp3 = tf.stack([nvp,nvp,nvp],axis=2)
-    #     # nvn3  = tf.stack([nvn,nvn,nvn],axis=2)
-    #     # print(tf.reduce_max(output[j,:,:,:]))   
-    #     # prediction = (tf.divide(output[j,:,:,:],nvp3) - 0.5) * 2.0 ################
-    #     # norm = (tf.divide(z[j,:,:,:],nvn3) - 0.5) * 2.0            ################
-    #     prediction = (output[j,:,:,:]-0.5)*2
-    #     norm = (z[j,:,:,:]-0.5)*2
-    #     mask = y[j,:,:,0]
-    #     bmask = tf.cast(mask,tf.bool)
+        # loss = 0
+        # prediction = output[j,:,:,:]
+        # gt = z[j,:,:,:]
+        # mask = y[j,:,:,:]
+        # nvp = tf.norm(output[j,:,:,:],axis=2)
+        # nvn = tf.norm(z[j,:,:,:],axis=2)
+        # nvp3 = tf.stack([nvp,nvp,nvp],axis=2)
+        # nvn3  = tf.stack([nvn,nvn,nvn],axis=2)
+        # prediction /= nvp3
+        # print(prediction.shape)
+        # gt /= nvn3
+        # mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+        # for chn in range(3):
+        # loss += tf.reduce_mean(tf.square(prediction-gt))
+        # print(loss.eval())
+            # print(loss)
+        # cost += loss
 
-    #     total_pixels += tf.count_nonzero(bmask)
-        
-    #     a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
-    #     a22 = tf.boolean_mask(tf.reduce_sum(norm*norm, axis=2),bmask)
-    #     a12 = tf.boolean_mask(tf.reduce_sum(prediction*norm, axis=2),bmask)
-
-    #     cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
-    #     # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
-    #     cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
-    #     # angle_error = tf.acos(cos_dist)
-    #     mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
-
-    # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
-    # # cost += tf.reduce_mean(tf.boolean_mask(tf.abs(prediction-norm)))
-    # cost = loss / batch_size
-    cost = loss
+    # cost = loss
     lr = 0.0001
     optim = tf.train.AdamOptimizer(learning_rate=lr)
     opt = optim.minimize(cost)
@@ -374,12 +369,15 @@ with tf.Session(graph=train_graph) as sess:
                 train_mask[counter,:,:,2] = readmask('./train/mask', i)
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 
-                train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
-                train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
-                train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
-                # train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
-                # train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
-                # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
+                # train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
+                # train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
+                # train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
+                train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
+                train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
+                train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
+                train_color[cnt,:,:,:] = (train_color[counter,:,:,:]-0.5)*2
+                train_mask[cnt,:,:,:] = (train_mask[cnt,:,:,:]-0.5)*2
+                train_normal[cnt,:,:,:] = (train_normal[cnt,:,:,:]-0.5)*2
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
@@ -391,7 +389,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 100 == 0:
+            if num_batches % 300 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
@@ -404,12 +402,15 @@ with tf.Session(graph=train_graph) as sess:
                         validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
                         validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
-                        validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-                        validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-                        validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-                        # validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
-                        # validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
-                        # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
+                        # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+                        # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+                        # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+                        validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
+                        validation_color[cnt,:,:,:] = (validation_color[cnt,:,:,:]-0.5)*2
+                        validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
+                        validation_mask[cnt,:,:,:] = (validation_mask[cnt,:,:,:]-0.5)*2
+                        validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:])+1)
+                        validation_normal[cnt,:,:,:] = (validation_normal[cnt,:,:,:]-0.5)*2
                         cnt += 1
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
@@ -418,7 +419,7 @@ with tf.Session(graph=train_graph) as sess:
                     print("cross validation error: {:3f}".format(vc))
                     tmp = 0
                     for k in index:
-                        image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
+                        image=Image.fromarray((results[tmp,:,:,:]).astype(np.uint8))
                         image.save('./train/pred/'+str(k)+'.png')
                         tmp += 1
                     # print('end of one idex')
