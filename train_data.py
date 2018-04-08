@@ -71,8 +71,7 @@ with tf.Session() as sess:
     mae = Evaluation_script_.evaluate(prediction_folder, normal_folder, mask_folder,)
     print("Final MAE ==", mae)
         
-        
-	coord.request_stop()
+    coord.request_stop()
 	coord.join(threads)
 
 
