@@ -133,7 +133,7 @@ def buildModel(x,keep_prob):
     #
     convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
     convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7,keep_prob)
-    convB_2 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
+    convB_2 = hourglass(convB_1,128,128,32,1,3,5,7,keep_prob)
     # print(convB_2.shape) # 64 x 64 x 128
 
     ##
@@ -375,9 +375,9 @@ with tf.Session(graph=train_graph) as sess:
                 train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
                 train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
                 train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
-                train_color[cnt,:,:,:] = (train_color[counter,:,:,:]-0.5)*2
-                train_mask[cnt,:,:,:] = (train_mask[cnt,:,:,:]-0.5)*2
-                train_normal[cnt,:,:,:] = (train_normal[cnt,:,:,:]-0.5)*2
+                train_color[counter,:,:,:] = (train_color[counter,:,:,:]-0.5)*2
+                train_mask[counter,:,:,:] = (train_mask[counter,:,:,:]-0.5)*2
+                train_normal[counter,:,:,:] = (train_normal[counter,:,:,:]-0.5)*2
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
