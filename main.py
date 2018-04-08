@@ -72,162 +72,39 @@ def hourglass(inputs, in_dim, out_dim, inter_dim, conv1_size, conv2_size, conv3_
     w02 = weight_variable([1,1,in_dim,inter_dim])
     b02 = bias_variable([inter_dim])
     conv02 = tf.nn.relu(conv2d(inputs, w02) + b02)
-<<<<<<< HEAD
   
-=======
-    conv02 = tf.nn.dropout(conv02,keep_prob = keep_prob)
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
 
     w03 = weight_variable([1,1,in_dim,inter_dim])
     b03 = bias_variable([inter_dim])
     conv03 = tf.nn.relu(conv2d(inputs, w03) + b03)
-<<<<<<< HEAD
 
-=======
-    conv03 = tf.nn.dropout(conv03,keep_prob = keep_prob)
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
 
     w04 = weight_variable([1,1,in_dim,inter_dim])
     b04 = bias_variable([inter_dim])
     conv04 = tf.nn.relu(conv2d(inputs, w04) + b04)
-    conv04 = tf.nn.dropout(conv04,keep_prob = keep_prob)
 
 
     w1 = weight_variable([conv1_size,conv1_size,in_dim,out_dim//4])
     b1 = bias_variable([out_dim//4])
     conv1 = tf.nn.relu(conv2d(inputs,w1) + b1)   
-    conv1 = tf.nn.dropout(conv1,keep_prob = keep_prob)
-
+    
     w2 = weight_variable([conv2_size,conv2_size,inter_dim,out_dim//4])
     b2 = bias_variable([out_dim//4])
     conv2 = tf.nn.relu(conv2d(conv02,w2) + b2)
-    conv2 = tf.nn.dropout(conv2,keep_prob = keep_prob)
-
+    
     w3 = weight_variable([conv3_size,conv3_size,inter_dim, out_dim//4])
     b3 = bias_variable([out_dim//4])
     conv3 = tf.nn.relu(conv2d(conv03,w3) + b3)
-    conv3 = tf.nn.dropout(conv3,keep_prob = keep_prob)
-  
+    
     w4 = weight_variable([conv4_size,conv4_size,inter_dim, out_dim//4])
     b4 = bias_variable([out_dim//4])
     conv4 = tf.nn.relu(conv2d(conv04,w4) + b4)
-    conv4 = tf.nn.dropout(conv4,keep_prob = keep_prob)
-   
+    
     res = tf.concat([conv1, conv2, conv3, conv4], axis=3)
     
     return res
 
 
-<<<<<<< HEAD
-=======
-def buildModel(x,keep_prob):
-    """
-    build the stacked hourglass net model
-    x: inputs 128 x 128 x 3
-    return: outputs of the model 128 x 128 x 3
-    """
-    wh0 = weight_variable([3,3,3,16])
-    bh0 = bias_variable([16])
-    convH = tf.nn.relu(conv2d(x, wh0) + bh0)
-    # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 16
-    #
-    convA = hourglass(convH,16,32,12,1,3,5,7,keep_prob)
-    # print(convA.shape) # 128 x 128 x 64
-    [dummybatch,height4,width4,depth4] = convA.shape
-    #
-    #
-    convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_1 = hourglass(convB_maxpool,32,32,12,1,3,5,7,keep_prob)
-    convB_2 = hourglass(convB_1,32,32,12,1,3,5,7,keep_prob)
-    # print(convB_2.shape) # 64 x 64 x 128
-
-    # ##
-    convB_3 = hourglass(convB_2,32,32,12,1,3,5,7,keep_prob)
-    convC = hourglass(convB_3,32,32,12,1,3,5,7,keep_prob)
-    # convC = convB_3
-    # # convC = tf.nn.dropout(convC,keep_prob=keep_prob)
-    # # print(convC.shape) # 64 x 64 x 128
-    [dummybatch,height3,width3,depth3] = convC.shape
-    # ##
-    # ##
-    convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_4 = hourglass(convB_maxpool_2,32,32,12,1,3,5,7,keep_prob)
-    convD = hourglass(convB_4,32,32,12,1,3,5,7,keep_prob)
-    # convD = convB_4
-    # print(convD.shape) # 32 x 32 x 256
-    ##
-    # ###
-    # convE = hourglass(convD,256,256,32,1,3,5,7)
-    # convE = tf.nn.dropout(convE,keep_prob=keep_prob) 
-    # # convF = hourglass(convE,256,256,64,1,3,7,11)
-    # # convF = tf.nn.dropout(convF,keep_prob=keep_prob)
-    # convF = convE
-    # # print(convF.shape) # 32 x 32 x 256
-    # [dummybatch,height2,width2,depth2] = convF.shape
-    # ###
-    # ###
-    # convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='SAME')
-    # convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7)
-    # # convE_2 = tf.nn.dropout(convE_2,keep_prob=keep_prob)
-    # # convE_3 = hourglass(convE_2,256,256,32,1,3,5,7)
-    # convE_3 = convE_2
-    # # convE_3 = tf.nn.dropout(convE_3,keep_prob=keep_prob)
-    # # print(convE_3.shape) # 16 x 16 x 256
-    # ###
-    # # ####
-    # # convE_4 = hourglass(convE_3,256,256,32,1,3,5,7)
-    # # convE_4 = tf.nn.dropout(convE_4,keep_prob=keep_prob)
-    # # # convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
-    # # convE_5 = convE_4
-    # # # convE_5 = tf.nn.dropout(convE_5,keep_prob=keep_prob)
-    # # # print(convE_5.shape) # 16 x 16 x 256
-    # # [dummybatch,height,width,depth] = convE_5.shape
-    # # ####
-    # # ####
-    # # convE_3_maxpool = tf.nn.max_pool(convE_3,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
-    # # convE_6 = hourglass(convE_3_maxpool,256,256,32,1,3,5,7)
-    # # # convE_7 = hourglass(convE_6,256,256,32,1,3,5,7)
-    # # # convE_7 = tf.nn.dropout(convE_7,keep_prob=keep_prob)
-    # # # convE_8 = hourglass(convE_7,256,256,32,1,3,5,7)
-    # # convE_8 = convE_6
-    # # # convE_8 = tf.nn.dropout(convE_8,keep_prob=keep_prob)
-    # # # print(convE_8.shape) # 8 x 8 x 256
-    # # ####
-    # # ####
-    # # upsample_4 = tf.image.resize_nearest_neighbor(convE_8,[height,width])
-    # # convE_9 = tf.add(upsample_4,convE_5)
-    # # # print(convE_9.shape) # 16 x 16 x 256
-    # # ####
-    # ###
-    # convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
-    # # convF_2 = hourglass(convE_10,256,256,64,1,3,7,11)
-    # convF_2 = convE_10
-    # # convF_2 = tf.nn.dropout(convF_2,keep_prob=keep_prob)
-    # upsample_3 = tf.image.resize_nearest_neighbor(convF_2,[height2,width2])
-    # convF_3 = tf.add(upsample_3,convF)
-    # #print(convF_3.shape)
-    # ###
-    ##
-    convE_11 = hourglass(convF_3,32,32,12,1,3,5,7,keep_prob)
-    convG = hourglass(convE_11,32,32,12,1,3,5,7,keep_prob)
-    upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
-    convG_2 = tf.add(upsample_2,convC)
-    #print(convG_2.shape)
-    convB_5 = hourglass(convG_2,32,32,12,1,3,5,7,keep_prob)  
-    # convB_5 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob) ## changed
-    convA_2 = hourglass(convB_5,32,16,8,1,3,7,11,keep_prob)
-    ##
-    #
-    upsample_1 = tf.image.resize_nearest_neighbor(convA_2,[height4,width4])
-    convA_3 = tf.add(upsample_1,convA)
-    #print(convA_3.shape)
-    #
-    wh1 = weight_variable([3,3,16,3])
-    bh1 = bias_variable([3])
-    convH_2 = tf.nn.relu(conv2d(convA_3, wh1)+bh1,name='output')
-    return convH_2
-
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
 def train_test_split(random_indexes,validation_size):
     train_indexes = random_indexes[:len(random_indexes)-validation_size]
     test_indexes = random_indexes[len(random_indexes)-validation_size:]
@@ -249,20 +126,6 @@ def scan_png_files(folder):
 
     return ret
 
-def evaluation(prediction, mask, normal):
-	#pic_num = prediction.get_shape()[0]
-	pic_num = choose_num
-	print("pic_num=",pic_num)
-	loss = 0
-	prediction = prediction / 255.0
-	print("scalar")
-	normal = normal / 255.0
-	nor = normal*mask
-	pre = prediction*mask
-	for pn in range(0,pic_num):
-		for cha in range(0,3):
-			loss += tf.norm(nor[pn,:,:,cha] - pre[pn,:,:,cha])
-	return loss/choose_num
 
 def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     '''
@@ -343,7 +206,6 @@ with train_graph.as_default():
     is_training = tf.placeholder(tf.bool,name='is_training') # for batch_normalization
     keep_prob = tf.placeholder(tf.float32,name='keep_prob') # dropout
 
-<<<<<<< HEAD
     output = buildModel(x,keep_prob,is_training)
 
     loss = 0
@@ -352,54 +214,6 @@ with train_graph.as_default():
         mask_region = tf.not_equal(mask, tf.zeros_like(mask))
         for chn in range(3):
             loss += tf.reduce_mean(tf.boolean_mask(tf.square(output[j,:,:,chn]-z[j,:,:,chn]),mask_region[:,:,chn]))
-=======
-    # output = buildModel(x,keep_prob)
-
-    ## conv1 layer ##
-    W_conv1 = weight_variable([3,3,3,64]) # patch 3x3, in size 1, out size 128
-    b_conv1 = bias_variable([64])
-    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1) # output size 128x128x128 
-    print("conv1 == ", h_conv1.get_shape())                                      
-
-    ## conv2 layer ##
-    W_conv2 = weight_variable([3,3, 64, 128]) # patch 3x3, in size 128, out size 256
-    b_conv2 = bias_variable([128])
-    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2) + b_conv2) # output size 128x128x256
-    print("conv2 == ", h_conv2.get_shape())  
-
-    ## conv3 layer ##
-    W_conv3 = weight_variable([3,3, 128, 128]) # patch 3x3, in size 256, out size 256
-    b_conv3 = bias_variable([128])
-    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3) + b_conv3) # output size 128x128x256
-    print("conv3 == ", h_conv3.get_shape())  
-
-    ## conv4 layer ##
-    W_conv4 = weight_variable([3,3, 128, 64]) # patch 3x3, in size 256, out size 128
-    b_conv4 = bias_variable([64])
-    h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4) + b_conv4) # output size 128x128x128
-    print("conv4 == ", h_conv4.get_shape())  
-
-    ## conv5 layer ##
-    W_conv5 = weight_variable([3,3, 64, 32]) # patch 3x3, in size 256, out size 128
-    b_conv5 = bias_variable([32])
-    h_conv5 = tf.nn.relu(conv2d(h_conv4, W_conv5) + b_conv5) # output size 128x128x128
-    print("conv4 == ", h_conv5.get_shape())  
-
-    ## conv5 layer ##
-    W_conv6 = weight_variable([3,3, 32, 3]) # patch 3x3, in size 128, out size 3
-    b_conv6 = bias_variable([3])
-    output = tf.nn.relu(conv2d(h_conv5, W_conv6) + b_conv6,name='output') # output size 128x128x3
-
-    loss = 0
-    loss = evaluation(output,y,z)
-    # for j in range(batch_size):
-    #     mask = y[j,:,:,:]
-    #     mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        
-    #     loss += tf.reduce_mean(tf.boolean_mask(tf.abs(output[j,:,:,:]-z[j,:,:,:]),mask_region))
-
-    
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
     # mean_angle_error = 0.0
     # total_pixels = 0
 
@@ -431,16 +245,12 @@ with train_graph.as_default():
     # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     # # cost += tf.reduce_mean(tf.boolean_mask(tf.abs(prediction-norm)))
     cost = loss
-<<<<<<< HEAD
 
     if use_batch_norm:
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
     else:
         opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
-=======
-    opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
 
 
 # the driver
@@ -471,20 +281,16 @@ with tf.Session(graph=train_graph) as sess:
                 train_mask[counter,:,:,2] = readmask('./train/mask', i)
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 
-                # train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
-                # train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
-                # train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
+                train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
+                train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
+                train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
                 # train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
                 # train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
                 # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
-<<<<<<< HEAD
              keep_prob:keep_probability, is_training:True})
-=======
-             keep_prob:1.0})
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
             los += c
             num_batches += 1
             if num_batches % every == 0:
@@ -492,11 +298,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-<<<<<<< HEAD
             if num_batches % 15 == 0:
-=======
-            if num_batches % 100 == 0:
->>>>>>> dc5900799871edcc7e5f5cd87b96684a8d8784bc
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
@@ -509,9 +311,9 @@ with tf.Session(graph=train_graph) as sess:
                         validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
                         validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
-                        # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-                        # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-                        # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+                        validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+                        validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+                        validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
                         # validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
                         # validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
                         # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
