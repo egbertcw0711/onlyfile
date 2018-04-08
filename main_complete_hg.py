@@ -298,10 +298,14 @@ with train_graph.as_default():
     b1 = bias_variable([512])
     conv1 = tf.nn.relu(conv2d(x,w1)+b1)
     conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-    w2 = weight_variable([1,1,512,3])
-    b2 = bias_variable([3])
-    output = tf.nn.relu(conv2d(conv2,w2)+b2)
-    output = tf.nn.dropout(output,keep_prob=keep_prob,name='output')
+    w2 = weight_variable([3,3,512,512])
+    b2 = bias_variable([512])
+    conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
+    conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
+    we = weight_variable([1,1,512,3])
+    be = bias_variable([3])
+    conve = tf.nn.relu(conv2d(conv2,we)+be)
+    output = tf.nn.dropout(conve,keep_prob=keep_prob,name='output')
     
     # mask = tf.concat([y,y,y],axis=3)
     # mask_region = tf.not_equal(y,tf.zeros_like(y))
@@ -343,7 +347,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 1
+        every = 5
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
