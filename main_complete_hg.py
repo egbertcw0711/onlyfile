@@ -282,7 +282,7 @@ data_size = 20000
 epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
-keep_probability = 0.9
+keep_probability = 1.0
 
 # build the graph
 train_graph = tf.Graph()
@@ -293,49 +293,33 @@ with train_graph.as_default():
     keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    output = buildModel(x,keep_prob)
-    # w1 = weight_variable([3,3,3,512])
-    # b1 = bias_variable([512])
-    # conv1 = tf.nn.relu(conv2d(x,w1)+b1)
-    # conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-    # w2 = weight_variable([1,1,512,3])
-    # b2 = bias_variable([3])
-    # output = tf.nn.relu(conv2d(conv2,w2)+b2)
-    # output = tf.nn.dropout(output,keep_prob=keep_prob,name='output')
+    # output = buildModel(x,keep_prob)
+    w1 = weight_variable([3,3,3,512])
+    b1 = bias_variable([512])
+    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+    conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
+    w2 = weight_variable([1,1,512,3])
+    b2 = bias_variable([3])
+    output = tf.nn.relu(conv2d(conv2,w2)+b2)
+    output = tf.nn.dropout(output,keep_prob=keep_prob,name='output')
     
-    # prediction  = output * y
-    # gt = z * y
     # mask = tf.concat([y,y,y],axis=3)
-    mask_region = tf.not_equal(y,tf.zeros_like(y))
+    # mask_region = tf.not_equal(y,tf.zeros_like(y))
     # loss = tf.reduce_mean(tf.boolean_mask(tf.abs(output-z),mask_region))
-    cost = tf.reduce_mean(tf.abs(output-z))
-    # cost = tf.reduce_mean(tf.square(prediction-gt))
-    # loss = tf.Variable(0.0)
-    # init = tf.initialize_all_variables()
-    # assign_op = loss.assign(0.0)
-    # sess = tf.InteractiveSession()
-    # sess.run(assign_op)
-    # print(loss.eval())
-    # for j in range(batch_size):
-        # loss = 0
-        # prediction = output[j,:,:,:]
-        # gt = z[j,:,:,:]
-        # mask = y[j,:,:,:]
-        # nvp = tf.norm(output[j,:,:,:],axis=2)
-        # nvn = tf.norm(z[j,:,:,:],axis=2)
-        # nvp3 = tf.stack([nvp,nvp,nvp],axis=2)
-        # nvn3  = tf.stack([nvn,nvn,nvn],axis=2)
-        # prediction /= nvp3
-        # print(prediction.shape)
-        # gt /= nvn3
-        # mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        # for chn in range(3):
-        # loss += tf.reduce_mean(tf.square(prediction-gt))
-        # print(loss.eval())
-            # print(loss)
-        # cost += loss
+    # cost = tf.reduce_mean(tf.abs(output-z))
 
-    # cost = loss
+    loss = 0
+    for j in range(batch_size):
+        gt = z[j,:,:,:]
+        mask = y[j,:,:,:]
+        mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+        for chn in range(3):
+            tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
+            tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
+            loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
+
+
+    cost = loss / batch_size
     lr = 0.0001
     optim = tf.train.AdamOptimizer(learning_rate=lr)
     opt = optim.minimize(cost)
@@ -359,7 +343,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 5
+        every = 1
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -375,9 +359,6 @@ with tf.Session(graph=train_graph) as sess:
                 train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
                 train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
                 train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
-                train_color[counter,:,:,:] = (train_color[counter,:,:,:]-0.5)*2
-                train_mask[counter,:,:,:] = (train_mask[counter,:,:,:]-0.5)*2
-                train_normal[counter,:,:,:] = (train_normal[counter,:,:,:]-0.5)*2
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
@@ -406,11 +387,8 @@ with tf.Session(graph=train_graph) as sess:
                         # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
                         # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
                         validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
-                        validation_color[cnt,:,:,:] = (validation_color[cnt,:,:,:]-0.5)*2
                         validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
-                        validation_mask[cnt,:,:,:] = (validation_mask[cnt,:,:,:]-0.5)*2
                         validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:])+1)
-                        validation_normal[cnt,:,:,:] = (validation_normal[cnt,:,:,:]-0.5)*2
                         cnt += 1
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
@@ -419,10 +397,9 @@ with tf.Session(graph=train_graph) as sess:
                     print("cross validation error: {:3f}".format(vc))
                     tmp = 0
                     for k in index:
-                        image=Image.fromarray((results[tmp,:,:,:]).astype(np.uint8))
+                        image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
                         image.save('./train/pred/'+str(k)+'.png')
                         tmp += 1
-                    # print('end of one idex')
                     div += 1
                 print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
