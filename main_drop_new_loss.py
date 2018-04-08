@@ -316,8 +316,8 @@ with train_graph.as_default():
     total_pixels = 0
 
     for j in range(batch_size):
-        prediction = (output[j,:,:,:]-0.5)*2
-        norm = (z[j,:,:,:]-0.5)*2
+        prediction = output[j,:,:,:]
+        norm = z[j,:,:,:]
         mask = y[j,:,:,0]
         bmask = tf.cast(mask,tf.bool)
 
@@ -336,10 +336,10 @@ with train_graph.as_default():
     cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
     # cost += tf.reduce_mean(tf.boolean_mask(tf.abs(prediction-norm)))
     # cost = loss / batch_size
-    cost = loss
+    # cost = loss
     lr = 0.0001
     optim = tf.train.AdamOptimizer(learning_rate=lr)
-    opt = opt.minimize(cost)
+    opt = optim.minimize(cost)
 
 
 # the driver
@@ -370,12 +370,12 @@ with tf.Session(graph=train_graph) as sess:
                 train_mask[counter,:,:,2] = readmask('./train/mask', i)
                 train_normal[counter,:,:,:] = readimage('./train/normal', i)
                 
-                train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
-                train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
-                train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
-                # train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
-                # train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
-                # train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
+                # train_color[counter,:,:,:] = normalize(train_color[counter,:,:,:])
+                # train_mask[counter,:,:,:] = normalize(train_mask[counter,:,:,:])
+                # train_normal[counter,:,:,:] = normalize(train_normal[counter,:,:,:])
+                train_color[counter,:,:,:] /= np.amax(train_color[counter,:,:,:]+1)
+                train_mask[counter,:,:,:] /= np.amax(train_mask[counter,:,:,:]+1)
+                train_normal[counter,:,:,:] /= np.amax(train_normal[counter,:,:,:]+1)
                 counter += 1
 
             c, _ = sess.run([cost, opt], feed_dict={x: train_color, y:train_mask, z: train_normal,\
@@ -400,16 +400,16 @@ with tf.Session(graph=train_graph) as sess:
                         validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
                         validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
-                        validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
-                        validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
-                        validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-                        # validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
-                        # validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
-                        # validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
+                        # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
+                        # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
+                        # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
+                        validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
+                        validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
+                        validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:]+1)
                         cnt += 1
 
                     vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
-                        z: validation_normal, keep_prob: 1.0})
+                        z: validation_normal, keep_prob:keep_probability})
                     vlos += vc
                     print("cross validation error: {:3f}".format(vc))
                     tmp = 0
