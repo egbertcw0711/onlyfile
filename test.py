@@ -29,7 +29,7 @@ def normalize(x):
     for i in range(3):
         max_val = np.max(x[:,:,i])
         min_val = np.min(x[:,:,i])
-        res[:,:,i] = np.divide((x[:,:,i] - min_val),max_val - min_val+1)
+        res[:,:,i] = 1.0*(x[:,:,i] - min_val)/(max_val-min_val+1)
     return res
 
 batch_size = 20
@@ -50,7 +50,8 @@ with tf.Session(graph=loaded_graph) as sess:
 	loaded_x = loaded_graph.get_tensor_by_name('x:0')
 	loaded_y = loaded_graph.get_tensor_by_name('y:0')
 	loaded_z = loaded_graph.get_tensor_by_name('z:0')
-
+	# loaded_keep_prob = loaded_graph.get_tensor_by_name('keep_prob:0')
+	loaded_is_training = loaded_graph.get_tensor_by_name('is_training:0')
 	loaded_output = loaded_graph.get_tensor_by_name('output:0')
 
 	num_test = len(glob.glob('./test/color/*.png'))
@@ -58,7 +59,7 @@ with tf.Session(graph=loaded_graph) as sess:
 	for i in range(batches):
 		print('{:d}/{:d}'.format(i,batches))
 		for j in range(batch_size):
-			print(j)
+			# print(j)
 			test_color[j,:,:,:] = readimage('./test/color',j + i*batch_size)
 			test_mask[j,:,:,0] = readmask('./test/mask', j + i*batch_size)
 			test_mask[j,:,:,1] = readmask('./test/mask', j + i*batch_size)
@@ -66,8 +67,9 @@ with tf.Session(graph=loaded_graph) as sess:
 			test_color[j,:,:,:] = normalize(test_color[j,:,:,:])
 			test_mask[j,:,:,:] = normalize(test_mask[j,:,:,:])
 		
-		predictions = sess.run(loaded_output, feed_dict={loaded_x:test_color,loaded_y:test_mask})
+		predictions = sess.run(loaded_output, feed_dict={loaded_x:test_color,loaded_y:test_mask,loaded_is_training:False})
 		
 		for k in range(batch_size):
 			image=Image.fromarray((255.0*predictions[k,:,:,:]).astype(np.uint8))
-			image.save('./test/normal/'+str(k+i*batches)+'.png')
+			print(k+i*batch_size)
+			image.save('./test/normal/'+str(k+i*batch_size)+'.png')
