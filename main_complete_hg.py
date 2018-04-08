@@ -126,51 +126,51 @@ def buildModel(x,keep_prob):
     convH = tf.nn.dropout(convH,keep_prob=keep_prob)
     # print(convH.shape) # 128 x 128 x 3 -> 128 x 128 x 128
     #
-    convA = hourglass(convH,128,64,64,1,3,7,11)
+    convA = hourglass(convH,128,64,64,1,3,7,11,keep_prob)
     # print(convA.shape) # 128 x 128 x 64
     [dummybatch,height4,width4,depth4] = convA.shape
     #
     #
     convB_maxpool = tf.nn.max_pool(convH, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7)
-    convB_2 = hourglass(convB_2,128,128,32,1,3,5,7)
+    convB_1 = hourglass(convB_maxpool,128,128,32,1,3,5,7,keep_prob)
+    convB_2 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
     # print(convB_2.shape) # 64 x 64 x 128
 
     ##
-    convB_3 = hourglass(convB_2,128,128,32,1,3,5,7)
-    convC = hourglass(convB_3,128,128,64,1,3,7,11)
+    convB_3 = hourglass(convB_2,128,128,32,1,3,5,7,keep_prob)
+    convC = hourglass(convB_3,128,128,64,1,3,7,11,keep_prob)
     # print(convC.shape) # 64 x 64 x 128
     [dummybatch,height3,width3,depth3] = convC.shape
     ##
     ##
     convB_maxpool_2 = tf.nn.max_pool(convB_2, ksize=[1,2,2,1], strides=[1,2,2,1],padding = 'SAME')
-    convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7)
-    convD = hourglass(convB_4,128,256,32,1,3,5,7)
+    convB_4 = hourglass(convB_maxpool_2,128,128,32,1,3,5,7,keep_prob)
+    convD = hourglass(convB_4,128,256,32,1,3,5,7,keep_prob)
     # print(convD.shape) # 32 x 32 x 256
     ##
     ###
-    convE = hourglass(convD,256,256,32,1,3,5,7)
-    convF = hourglass(convE,256,256,64,1,3,7,11)
+    convE = hourglass(convD,256,256,32,1,3,5,7,keep_prob)
+    convF = hourglass(convE,256,256,64,1,3,7,11,keep_prob)
     # print(convF.shape) # 32 x 32 x 256
     [dummybatch,height2,width2,depth2] = convF.shape
     ###
     ###
     convD_maxpool = tf.nn.max_pool(convD, ksize=[1,2,2,1], strides=[1,2,2,1],padding='SAME')
-    convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7)
-    convE_3 = hourglass(convE_2,256,256,32,1,3,5,7)
+    convE_2 = hourglass(convD_maxpool,256,256,32,1,3,5,7,keep_prob)
+    convE_3 = hourglass(convE_2,256,256,32,1,3,5,7,keep_prob)
     # print(convE_3.shape) # 16 x 16 x 256
     ###
     ####
-    convE_4 = hourglass(convE_3,256,256,32,1,3,5,7)
-    convE_5 = hourglass(convE_4,256,256,32,1,3,5,7)
+    convE_4 = hourglass(convE_3,256,256,32,1,3,5,7,keep_prob)
+    convE_5 = hourglass(convE_4,256,256,32,1,3,5,7,keep_prob)
     # print(convE_5.shape) # 16 x 16 x 256
     [dummybatch,height,width,depth] = convE_5.shape
     ####
     ####
     convE_3_maxpool = tf.nn.max_pool(convE_3,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
-    convE_6 = hourglass(convE_3_maxpool,256,256,32,1,3,5,7)
-    convE_7 = hourglass(convE_6,256,256,32,1,3,5,7)
-    convE_8 = hourglass(convE_7,256,256,32,1,3,5,7)
+    convE_6 = hourglass(convE_3_maxpool,256,256,32,1,3,5,7,keep_prob)
+    convE_7 = hourglass(convE_6,256,256,32,1,3,5,7,keep_prob)
+    convE_8 = hourglass(convE_7,256,256,32,1,3,5,7,keep_prob)
     # convE_8 = tf.nn.dropout(convE_8,keep_prob=keep_prob)
     # print(convE_8.shape) # 8 x 8 x 256
     ####
@@ -180,21 +180,21 @@ def buildModel(x,keep_prob):
     # print(convE_9.shape) # 16 x 16 x 256
     ####
     ###
-    convE_10 = hourglass(convE_9,256,256,32,1,3,5,7)
-    convF_2 = hourglass(convE_10,256,256,64,1,3,7,11)
+    convE_10 = hourglass(convE_9,256,256,32,1,3,5,7,keep_prob)
+    convF_2 = hourglass(convE_10,256,256,64,1,3,7,11,keep_prob)
 
     upsample_3 = tf.image.resize_nearest_neighbor(convF_2,[height2,width2])
     convF_3 = tf.add(upsample_3,convF)
     #print(convF_3.shape)
     ###
     ##
-    convE_11 = hourglass(convF_3,256,256,32,1,3,5,7)
-    convG = hourglass(convE_11,256,128,32,1,3,5,7)
+    convE_11 = hourglass(convF_3,256,256,32,1,3,5,7,keep_prob)
+    convG = hourglass(convE_11,256,128,32,1,3,5,7,keep_prob)
     upsample_2 = tf.image.resize_nearest_neighbor(convG,[height3,width3])
     convG_2 = tf.add(upsample_2,convC)
     #print(convG_2.shape)
-    convB_5 = hourglass(convG_2,128,128,32,1,3,5,7)
-    convA_2 = hourglass(convB_5,128,64,64,1,3,7,11)
+    convB_5 = hourglass(convG_2,128,128,32,1,3,5,7,keep_prob)
+    convA_2 = hourglass(convB_5,128,64,64,1,3,7,11,keep_prob)
     ##
     #
     upsample_1 = tf.image.resize_nearest_neighbor(convA_2,[height4,width4])
