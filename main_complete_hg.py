@@ -341,7 +341,9 @@ with train_graph.as_default():
     # # cost += tf.reduce_mean(tf.boolean_mask(tf.abs(prediction-norm)))
     # cost = loss / batch_size
     cost = loss
-    opt = tf.train.AdamOptimizer(0.0001).minimize(cost)
+    lr = 0.0001
+    optim = tf.train.AdamOptimizer(learning_rate=lr)
+    opt = optim.minimize(cost)
 
 
 # the driver
@@ -389,7 +391,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 15 == 0:
+            if num_batches % 100 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
@@ -428,3 +430,6 @@ with tf.Session(graph=train_graph) as sess:
                     min_loss_so_far = valid
                     tf.train.Saver().save(sess, './best_model/surface_normal_est')
                     print('best model saved!\n')
+
+                lr *= 0.5
+                optim = tf.train.AdamOptimizer(learning_rate=lr)
