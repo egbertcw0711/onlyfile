@@ -283,7 +283,7 @@ epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
 keep_probability = 1.0
-restore = False
+restore = True
 
 # build the graph
 train_graph = tf.Graph()
@@ -319,27 +319,12 @@ with train_graph.as_default():
             loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
     cost = tf.identity(loss / batch_size, name='cost')
 
-    # mean_angle_error = 0.0
-    # total_pixels = 0
     # for j in range(batch_size):
-    #     prediction = output[j,:,:,:]
-    #     norm = z[j,:,:,:]
-    #     mask = y[j,:,:,0]
-    #     bmask = tf.cast(mask,tf.bool)
-
-    #     total_pixels += tf.count_nonzero(bmask)
-
-    #     a11 = (tf.reduce_sum(prediction*prediction, axis=2))*mask
-    #     a22 = (tf.reduce_sum(norm*norm, axis=2))*mask
-    #     a12 = (tf.reduce_sum(prediction*norm, axis=2))*mask
-
-    #     cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
-    #     # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
-    #     cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
-    #     # angle_error = tf.acos(cos_dist)
-    #     mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
-
-    # cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
+    #     mask = y[j,:,:,:]
+    #     mask_region = tf.not_equal(mask,tf.zeros_like(mask))
+    #     loss += tf.losses.cosine_distance(z[j,:,:,:]*mask_region,\
+    #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
+    # cost = tf.identity(loss / batch_size, name='cost')
     
     lr = 0.0001
     optim = tf.train.AdamOptimizer(learning_rate=lr)
@@ -371,7 +356,7 @@ with tf.Session(graph=train_graph) as sess:
         keep_prob = loaded_graph.get_tensor_by_name('keep_prob:0')
         output = loaded_graph.get_tensor_by_name('output:0')
         cost = loaded_graph.get_tensor_by_name('cost:0')
-        
+
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
@@ -440,6 +425,7 @@ with tf.Session(graph=train_graph) as sess:
                     min_loss_so_far = valid
                     tf.train.Saver().save(sess, './best_model/surface_normal_est')
                     print('best model saved!\n')
-                # else:
-                lr *= 0.5
+                else:
+                    lr *= 0.5
+                print('changed learning_rate to',lr)
                 optim = tf.train.AdamOptimizer(learning_rate=lr)
