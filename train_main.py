@@ -360,7 +360,7 @@ with tf.Session(graph=train_graph) as sess:
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 1
+        every = 5
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -387,7 +387,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 30 == 0:
+            if num_batches % 300 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
