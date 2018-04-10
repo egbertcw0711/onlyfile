@@ -331,19 +331,17 @@ if not restore:
         #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
         # cost = tf.identity(loss / batch_size, name='cost')
         
-        mean_angle_error = 0.0
-        total_pixels = 0
         for j in range(batch_size):
-            prediction = output[j,:,:,:]
-            norm = z[j,:,:,:]
+            prediction = (output[j,:,:,:]-0.5)*2
+            norm = (z[j,:,:,:]-0.5)*2
             mask = y[j,:,:,0]
             bmask = tf.cast(mask,tf.bool)
 
             total_pixels += tf.count_nonzero(bmask)
-
-            a11 = (tf.reduce_sum(prediction*prediction, axis=2))*mask
-            a22 = (tf.reduce_sum(norm*norm, axis=2))*mask
-            a12 = (tf.reduce_sum(prediction*norm, axis=2))*mask
+            
+            a11 = tf.boolean_mask(tf.reduce_sum(prediction*prediction, axis=2),bmask)
+            a22 = tf.boolean_mask(tf.reduce_sum(norm*norm, axis=2),bmask)
+            a12 = tf.boolean_mask(tf.reduce_sum(prediction*norm, axis=2),bmask)
 
             cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
             # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
@@ -351,7 +349,7 @@ if not restore:
             # angle_error = tf.acos(cos_dist)
             mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
-        loss = mean_angle_error / tf.cast(total_pixels,tf.float32)
+        cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
         cost = tf.identity(loss,name='cost')
 
         lr = tf.identity(0.0001,name='lr')
