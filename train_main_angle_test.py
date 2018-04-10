@@ -314,7 +314,7 @@ if not restore:
         output = tf.identity(output, name='output')
 
 
-        loss = 0
+        loss = 0.0
         # for j in range(batch_size):
         #     mask = y[j,:,:,:]
         #     mask_region = tf.not_equal(mask, tf.zeros_like(mask))
@@ -333,7 +333,7 @@ if not restore:
         # cost = tf.identity(loss / batch_size, name='cost')
         
         mean_angle_error = 0.0
-        total_pixels = 0
+        total_pixels = 0.0
         for j in range(batch_size):
             prediction = output[j,:,:,:]
             norm = z[j,:,:,:]
