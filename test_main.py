@@ -63,8 +63,8 @@ with tf.Session(graph=loaded_graph) as sess:
 			test_mask[j,:,:,0] = readmask('./test/mask', j + i*batch_size)
 			test_mask[j,:,:,1] = readmask('./test/mask', j + i*batch_size)
 			test_mask[j,:,:,2] = readmask('./test/mask', j + i*batch_size)
-			test_color[j,:,:,:] /= np.amax(test_color[counter,:,:,:]+1)
-			test_mask[j,:,:,:] /= np.amax(test_mask[counter,:,:,:]+1)
+			test_color[j,:,:,:] /= np.amax(test_color[j,:,:,:]+1)
+			test_mask[j,:,:,:] /= np.amax(test_mask[j,:,:,:]+1)
 		
 		predictions = sess.run(loaded_output, feed_dict={loaded_x:test_color,loaded_y:test_mask,loaded_keep_prob:1.0})
 		
