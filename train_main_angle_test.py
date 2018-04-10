@@ -333,7 +333,7 @@ if not restore:
         # cost = tf.identity(loss / batch_size, name='cost')
         
         mean_angle_error = 0.0
-        total_pixels = 0.0
+        total_pixels = 0
         for j in range(batch_size):
             prediction = output[j,:,:,:]
             norm = z[j,:,:,:]
