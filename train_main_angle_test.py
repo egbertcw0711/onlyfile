@@ -352,7 +352,7 @@ if not restore:
             # angle_error = tf.acos(cos_dist)
             mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
 
-        cost = mean_angle_error / tf.cast(total_pixels,tf.float32)
+        loss = mean_angle_error / tf.cast(total_pixels,tf.float32)
         cost = tf.identity(loss,name='cost')
 
 
