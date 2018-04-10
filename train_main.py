@@ -287,48 +287,49 @@ restore = False
 
 # build the graph
 train_graph = tf.Graph()
-with train_graph.as_default():
-    x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
-    y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
-    z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
-    keep_prob = tf.placeholder(tf.float32,name='keep_prob')
+if not restore:
+    with train_graph.as_default():
+        x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
+        y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
+        z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
+        keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    # output = buildModel(x,keep_prob)
-    w1 = weight_variable([3,3,3,512])
-    b1 = bias_variable([512])
-    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
-    conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-    # w2 = weight_variable([3,3,512,512])
-    # b2 = bias_variable([512])
-    # conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
-    # conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
-    we = weight_variable([1,1,512,3])
-    be = bias_variable([3])
-    conve = tf.nn.relu(conv2d(conv2,we)+be)
-    output = tf.nn.dropout(conve,keep_prob=keep_prob)
-    output = tf.identity(output, name='output')
+        # output = buildModel(x,keep_prob)
+        w1 = weight_variable([3,3,3,512])
+        b1 = bias_variable([512])
+        conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+        conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
+        # w2 = weight_variable([3,3,512,512])
+        # b2 = bias_variable([512])
+        # conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
+        # conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
+        we = weight_variable([1,1,512,3])
+        be = bias_variable([3])
+        conve = tf.nn.relu(conv2d(conv2,we)+be)
+        output = tf.nn.dropout(conve,keep_prob=keep_prob)
+        output = tf.identity(output, name='output')
 
-    loss = 0
-    for j in range(batch_size):
-        mask = y[j,:,:,:]
-        mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        for chn in range(3):
-            tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
-            tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
-            loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
-    cost = tf.identity(loss / batch_size, name='cost')
+        loss = 0
+        for j in range(batch_size):
+            mask = y[j,:,:,:]
+            mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+            for chn in range(3):
+                tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
+                tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
+                loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
+        cost = tf.identity(loss / batch_size, name='cost')
 
-    # for j in range(batch_size):
-    #     mask = y[j,:,:,:]
-    #     mask_region = tf.not_equal(mask,tf.zeros_like(mask))
-    #     loss += tf.losses.cosine_distance(z[j,:,:,:]*mask_region,\
-    #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
-    # cost = tf.identity(loss / batch_size, name='cost')
-    
-    lr = tf.identity(0.0001,name='lr')
-    optim = tf.train.AdamOptimizer(learning_rate=lr)
-    opt = optim.minimize(cost)
+        # for j in range(batch_size):
+        #     mask = y[j,:,:,:]
+        #     mask_region = tf.not_equal(mask,tf.zeros_like(mask))
+        #     loss += tf.losses.cosine_distance(z[j,:,:,:]*mask_region,\
+        #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
+        # cost = tf.identity(loss / batch_size, name='cost')
+        
+        lr = tf.identity(0.0001,name='lr')
+        optim = tf.train.AdamOptimizer(learning_rate=lr)
+        opt = optim.minimize(cost)
 
 
 # the driver
@@ -360,6 +361,7 @@ with tf.Session(graph=train_graph) as sess:
         lr = train_graph.get_tensor_by_name('lr:0')
         optim = tf.train.AdamOptimizer(learning_rate=lr)
         opt = optim.minimize(cost)
+        print('restored the model!')
 
     for e in range(1,epochs+1):
         num_batches = 0
