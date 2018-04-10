@@ -283,7 +283,7 @@ epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
 keep_probability = 1.0
-restore = False
+restore = True
 
 # build the graph
 train_graph = tf.Graph()
@@ -331,6 +331,8 @@ if not restore:
         optim = tf.train.AdamOptimizer(learning_rate=lr)
         opt = optim.minimize(cost)
 
+        tf.add_to_collection('optimizer',opt)
+
 
 # the driver
 random.shuffle(data)
@@ -359,8 +361,8 @@ with tf.Session(graph=train_graph) as sess:
         output = train_graph.get_tensor_by_name('output:0')
         cost = train_graph.get_tensor_by_name('cost:0')
         lr = train_graph.get_tensor_by_name('lr:0')
-        optim = tf.train.AdamOptimizer(learning_rate=lr)
-        opt = optim.minimize(cost)
+        opt = tf.get_collection('optimizer')[0]
+        #opt = optim.minimize(cost)
         print('restored the model!')
 
     for e in range(1,epochs+1):
@@ -393,7 +395,7 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 300 == 0:
+            if num_batches % 100 == 0:
                 vlos = 0
                 valid_batches = len(test) // batch_size
                 div = 0
