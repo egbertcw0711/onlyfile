@@ -283,7 +283,7 @@ epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
 keep_probability = 1.0
-restore = True
+restore = False
 
 # build the graph
 train_graph = tf.Graph()
@@ -308,17 +308,21 @@ if not restore:
         be = bias_variable([3])
         conve = tf.nn.relu(conv2d(conv2,we)+be)
         output = tf.nn.dropout(conve,keep_prob=keep_prob)
+
+
+        ##### do not comment out this line!!!! #####
         output = tf.identity(output, name='output')
 
-        loss = 0
-        for j in range(batch_size):
-            mask = y[j,:,:,:]
-            mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-            for chn in range(3):
-                tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
-                tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
-                loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
-        cost = tf.identity(loss / batch_size, name='cost')
+
+        # loss = 0
+        # for j in range(batch_size):
+        #     mask = y[j,:,:,:]
+        #     mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+        #     for chn in range(3):
+        #         tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
+        #         tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
+        #         loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
+        # cost = tf.identity(loss / batch_size, name='cost')
 
         # for j in range(batch_size):
         #     mask = y[j,:,:,:]
@@ -327,6 +331,29 @@ if not restore:
         #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
         # cost = tf.identity(loss / batch_size, name='cost')
         
+        mean_angle_error = 0.0
+        total_pixels = 0
+        for j in range(batch_size):
+            prediction = output[j,:,:,:]
+            norm = z[j,:,:,:]
+            mask = y[j,:,:,0]
+            bmask = tf.cast(mask,tf.bool)
+
+            total_pixels += tf.count_nonzero(bmask)
+
+            a11 = (tf.reduce_sum(prediction*prediction, axis=2))*mask
+            a22 = (tf.reduce_sum(norm*norm, axis=2))*mask
+            a12 = (tf.reduce_sum(prediction*norm, axis=2))*mask
+
+            cos_dist = -1.0*a12 / tf.sqrt(a11 * a22)
+            # cos_dist = tf.where(tf.is_nan(cos_dist),1.0,cos_dist)
+            cos_dist = tf.clip_by_value(cos_dist, -1.0, 1.0)
+            # angle_error = tf.acos(cos_dist)
+            mean_angle_error += tf.reduce_sum(cos_dist) # -1 the best
+
+        loss = mean_angle_error / tf.cast(total_pixels,tf.float32)
+        cost = tf.identity(loss,name='cost')
+
         lr = tf.identity(0.0001,name='lr')
         optim = tf.train.AdamOptimizer(learning_rate=lr)
         opt = optim.minimize(cost)
@@ -362,7 +389,6 @@ with tf.Session(graph=train_graph) as sess:
         cost = train_graph.get_tensor_by_name('cost:0')
         lr = train_graph.get_tensor_by_name('lr:0')
         opt = tf.get_collection('optimizer')[0]
-        #opt = optim.minimize(cost)
         print('restored the model!')
 
     for e in range(1,epochs+1):
