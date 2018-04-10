@@ -283,52 +283,53 @@ epochs = 4
 data = [i for i in range(data_size)]
 batch_size = 20
 keep_probability = 1.0
-restore = True
+restore = False
 
 # build the graph
 train_graph = tf.Graph()
-with train_graph.as_default():
-    x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
-    y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
-    z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
-    keep_prob = tf.placeholder(tf.float32,name='keep_prob')
+if not restore:
+    with train_graph.as_default():
+        x = tf.placeholder(tf.float32,[None, 128,128,3],name='x') # color
+        y = tf.placeholder(tf.float32,[None, 128,128,3],name='y') # mask
+        z = tf.placeholder(tf.float32,[None, 128,128,3],name='z') # normal labels
+        keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-    # output = buildModel(x,keep_prob)
-    w1 = weight_variable([3,3,3,512])
-    b1 = bias_variable([512])
-    conv1 = tf.nn.relu(conv2d(x,w1)+b1)
-    conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-    # w2 = weight_variable([3,3,512,512])
-    # b2 = bias_variable([512])
-    # conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
-    # conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
-    we = weight_variable([1,1,512,3])
-    be = bias_variable([3])
-    conve = tf.nn.relu(conv2d(conv2,we)+be)
-    output = tf.nn.dropout(conve,keep_prob=keep_prob,name='output')
-    output = tf.identity(output, name='output')
+        # output = buildModel(x,keep_prob)
+        w1 = weight_variable([3,3,3,512])
+        b1 = bias_variable([512])
+        conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+        conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
+        # w2 = weight_variable([3,3,512,512])
+        # b2 = bias_variable([512])
+        # conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
+        # conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
+        we = weight_variable([1,1,512,3])
+        be = bias_variable([3])
+        conve = tf.nn.relu(conv2d(conv2,we)+be)
+        output = tf.nn.dropout(conve,keep_prob=keep_prob)
+        output = tf.identity(output, name='output')
 
-    loss = 0
-    for j in range(batch_size):
-        mask = y[j,:,:,:]
-        mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        for chn in range(3):
-            tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
-            tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
-            loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
-    cost = tf.identity(loss / batch_size, name='cost')
+        loss = 0
+        for j in range(batch_size):
+            mask = y[j,:,:,:]
+            mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+            for chn in range(3):
+                tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
+                tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
+                loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
+        cost = tf.identity(loss / batch_size, name='cost')
 
-    # for j in range(batch_size):
-    #     mask = y[j,:,:,:]
-    #     mask_region = tf.not_equal(mask,tf.zeros_like(mask))
-    #     loss += tf.losses.cosine_distance(z[j,:,:,:]*mask_region,\
-    #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
-    # cost = tf.identity(loss / batch_size, name='cost')
-    
-    lr = 0.0001
-    optim = tf.train.AdamOptimizer(learning_rate=lr)
-    opt = optim.minimize(cost)
+        # for j in range(batch_size):
+        #     mask = y[j,:,:,:]
+        #     mask_region = tf.not_equal(mask,tf.zeros_like(mask))
+        #     loss += tf.losses.cosine_distance(z[j,:,:,:]*mask_region,\
+        #         -1.0*output[j,:,:,:]*mask_region,dim=2,reduction=tf.losses.Reduction.MEAN)
+        # cost = tf.identity(loss / batch_size, name='cost')
+        
+        lr = tf.identity(0.0001,name='lr')
+        optim = tf.train.AdamOptimizer(learning_rate=lr)
+        opt = optim.minimize(cost)
 
 
 # the driver
@@ -347,15 +348,20 @@ save_model_path = './best_model/surface_normal_est'
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
     min_loss_so_far = 1.57
+    prev_valid_loss = float('inf')
     if restore:
         loader = tf.train.import_meta_graph(save_model_path+'.meta')
         loader.restore(sess,save_model_path)
         x = train_graph.get_tensor_by_name('x:0')
         y = train_graph.get_tensor_by_name('y:0')
         z = train_graph.get_tensor_by_name('z:0')
-        keep_prob = loaded_graph.get_tensor_by_name('keep_prob:0')
-        output = loaded_graph.get_tensor_by_name('output:0')
-        cost = loaded_graph.get_tensor_by_name('cost:0')
+        keep_prob = train_graph.get_tensor_by_name('keep_prob:0')
+        output = train_graph.get_tensor_by_name('output:0')
+        cost = train_graph.get_tensor_by_name('cost:0')
+        lr = train_graph.get_tensor_by_name('lr:0')
+        optim = tf.train.AdamOptimizer(learning_rate=lr)
+        opt = optim.minimize(cost)
+        print('restored the model!')
 
     for e in range(1,epochs+1):
         num_batches = 0
@@ -418,14 +424,14 @@ with tf.Session(graph=train_graph) as sess:
                         image.save('./train/pred/'+str(k)+'.png')
                         tmp += 1
                     div += 1
-                print('Avg validation loss: {:.3f}'.format(vlos/valid_batches))
+                avg_valid_loss = vlos/valid_batches
+                print('Avg validation loss: {:.3f}'.format(avg_valid_loss))
                 valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
                 print(valid)
                 if valid < min_loss_so_far:
                     min_loss_so_far = valid
                     tf.train.Saver().save(sess, './best_model/surface_normal_est')
                     print('best model saved!\n')
-                else:
+                if avg_valid_loss >= prev_valid_loss:
                     lr *= 0.5
-                print('changed learning_rate to',lr)
-                optim = tf.train.AdamOptimizer(learning_rate=lr)
+                    print('Now change learning_rate to', lr)
