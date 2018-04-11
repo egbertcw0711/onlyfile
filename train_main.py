@@ -279,11 +279,11 @@ def evaluate(prediction_folder, groundtruth_folder, mask_folder):
     return mean_angle_error / total_pixels
 
 data_size = 20000
-epochs = 4
+epochs = 10
 data = [i for i in range(data_size)]
 batch_size = 20
 keep_probability = 1.0
-restore = False
+restore = True
 
 # build the graph
 train_graph = tf.Graph()
@@ -295,41 +295,42 @@ if not restore:
         keep_prob = tf.placeholder(tf.float32,name='keep_prob')
 
 
-        # output = buildModel(x,keep_prob)
-        w1 = weight_variable([3,3,3,512])
-        b1 = bias_variable([512])
-        conv1 = tf.nn.relu(conv2d(x,w1)+b1)
-        conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
-        # w2 = weight_variable([3,3,512,512])
-        # b2 = bias_variable([512])
-        # conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
-        # conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
-        we = weight_variable([1,1,512,3])
-        be = bias_variable([3])
-        conve = tf.nn.relu(conv2d(conv2,we)+be)
-        output = tf.nn.dropout(conve,keep_prob=keep_prob)
+        output = buildModel(x,keep_prob)
+        #w1 = weight_variable([3,3,3,512])
+        #b1 = bias_variable([512])
+        #conv1 = tf.nn.relu(conv2d(x,w1)+b1)
+        #conv2 = tf.nn.dropout(conv1,keep_prob=keep_prob)
+        #w2 = weight_variable([3,3,512,512])
+        #b2 = bias_variable([512])
+        #conv2 = tf.nn.relu(conv2d(conv2,w2)+b2)
+        #conv2 = tf.nn.dropout(conv2,keep_prob=keep_prob)
+        #we = weight_variable([1,1,512,3])
+        #be = bias_variable([3])
+        #conve = tf.nn.relu(conv2d(conv2,we)+be)
+        #output = tf.nn.dropout(conve,keep_prob=keep_prob)
 
 
         ##### do not comment out this line!!!! #####
         output = tf.identity(output, name='output')
 
 
-        loss = 0
-        # for j in range(batch_size):
-        #     mask = y[j,:,:,:]
-        #     mask_region = tf.not_equal(mask, tf.zeros_like(mask))
-        #     for chn in range(3):
-        #         tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
-        #         tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
-        #         loss += tf.reduce_sum(tf.square(tmpOut-tmpGt))
-        # cost = tf.identity(loss / batch_size, name='cost')
-
+        loss1, loss2 = 0, 0
         for j in range(batch_size):
             mask = y[j,:,:,:]
-            mask_region = tf.not_equal(mask,tf.zeros_like(mask))
-            loss -= tf.losses.cosine_distance(tf.nn.l2_normalize(z[j,:,:,:],axis=2),\
-                tf.nn.l2_normalize(output[j,:,:,:],axis=2),dim=2,reduction=tf.losses.Reduction.MEAN)
-        cost = tf.identity(loss / batch_size, name='cost')
+            mask_region = tf.not_equal(mask, tf.zeros_like(mask))
+            for chn in range(3):
+                tmpOut = tf.boolean_mask(output[j,:,:,chn],mask_region[:,:,chn])
+                tmpGt = tf.boolean_mask(z[j,:,:,chn],mask_region[:,:,chn])
+                loss1 += tf.reduce_sum(tf.square(tmpOut-tmpGt))
+        cost = tf.identity(loss1 / batch_size, name='cost')
+
+        #for j in range(batch_size):
+        #    mask = y[j,:,:,:]
+        #    mask_region = tf.not_equal(mask,tf.zeros_like(mask))
+        #    loss2 += -1.0*tf.losses.cosine_distance(tf.nn.l2_normalize(z[j,:,:,:],dim=2),\
+        #        tf.nn.l2_normalize(output[j,:,:,:],dim=2),dim=2)
+        #cost = tf.identity(loss / batch_size, name='cost')
+        #cost = tf.add(loss1/batch_size,400*loss2/batch_size,name='cost')
         # mean_angle_error = 0.0
         # total_pixels = 0
         # for j in range(batch_size):
@@ -362,7 +363,7 @@ if not restore:
 
 # the driver
 random.shuffle(data)
-train, test = train_test_split(data,data_size//20)
+train, test = train_test_split(data,0)
 
 train_color = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
 train_mask = np.zeros(shape = (batch_size,128,128,3), dtype = 'float32')
@@ -376,7 +377,6 @@ save_model_path = './best_model/surface_normal_est'
 with tf.Session(graph=train_graph) as sess:
     sess.run(tf.global_variables_initializer())
     min_loss_so_far = 1.57
-    prev_valid_loss = float('inf')
     if restore:
         loader = tf.train.import_meta_graph(save_model_path+'.meta')
         loader.restore(sess,save_model_path)
@@ -387,13 +387,14 @@ with tf.Session(graph=train_graph) as sess:
         output = train_graph.get_tensor_by_name('output:0')
         cost = train_graph.get_tensor_by_name('cost:0')
         lr = train_graph.get_tensor_by_name('lr:0')
+        lr *= 1e-7
         opt = tf.get_collection('optimizer')[0]
         print('restored the model!')
 
     for e in range(1,epochs+1):
         num_batches = 0
         los = 0
-        every = 5
+        every = 20
         for batch_index in get_batches(train,batch_size):
             counter = 0
             for i in batch_index:
@@ -420,45 +421,45 @@ with tf.Session(graph=train_graph) as sess:
                       'Avg {} batch(es) training loss: {:.3f}'.format(every,los/every))
                 los = 0
 
-            if num_batches % 100 == 0:
-                vlos = 0
-                valid_batches = len(test) // batch_size
-                div = 0
-                for index in get_batches(test,batch_size):
-                    cnt = 0
-                    for k in index:
-                        validation_color[cnt,:,:,:] = readimage('./train/color', k)
-                        validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
-                        validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
-                        validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
-                        validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
+            if num_batches % 500 == 0:
+                #vlos = 0
+                #valid_batches = len(test) // batch_size
+                #div = 0
+                #for index in get_batches(test,batch_size):
+                #    cnt = 0
+                #    for k in index:
+                #        validation_color[cnt,:,:,:] = readimage('./train/color', k)
+                #        validation_mask[cnt,:,:,0] = readmask('./train/mask', k)
+                #        validation_mask[cnt,:,:,1] = readmask('./train/mask', k)
+                #        validation_mask[cnt,:,:,2] = readmask('./train/mask', k)
+                #        validation_normal[cnt,:,:,:] = readimage('./train/normal', k)
                         
                         # validation_color[cnt,:,:,:] = normalize(validation_color[cnt,:,:,:])
                         # validation_mask[cnt,:,:,:] = normalize(validation_mask[cnt,:,:,:])
                         # validation_normal[cnt,:,:,:] = normalize(validation_normal[cnt,:,:,:])
-                        validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
-                        validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
-                        validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:])+1)
-                        cnt += 1
+                #        validation_color[cnt,:,:,:] /= (np.amax(validation_color[cnt,:,:,:])+1)
+                #        validation_mask[cnt,:,:,:] /= (np.amax(validation_mask[cnt,:,:,:])+1)
+                #        validation_normal[cnt,:,:,:] /= (np.amax(validation_normal[cnt,:,:,:])+1)
+                #        cnt += 1
 
-                    vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
-                        z: validation_normal, keep_prob: 1.0})
-                    vlos += vc
-                    print("cross validation error: {:3f}".format(vc))
-                    tmp = 0
-                    for k in index:
-                        image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
-                        image.save('./train/pred/'+str(k)+'.png')
-                        tmp += 1
-                    div += 1
-                avg_valid_loss = vlos/valid_batches
-                print('Avg validation loss: {:.3f}'.format(avg_valid_loss))
-                valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
-                print(valid)
-                if valid < min_loss_so_far:
-                    min_loss_so_far = valid
-                    tf.train.Saver().save(sess, './best_model/surface_normal_est')
-                    print('best model saved!\n')
-                if avg_valid_loss >= prev_valid_loss:
-                    lr *= 0.5
-                    print('Now change learning_rate to', lr)
+                #    vc,results = sess.run([cost,output], feed_dict={x:validation_color, y:validation_mask, \
+                #        z: validation_normal, keep_prob: 1.0})
+                #    vlos += vc
+                #    print("cross validation error: {:3f}".format(vc))
+                #    tmp = 0
+                #    for k in index:
+                #        image=Image.fromarray((255.0*results[tmp,:,:,:]).astype(np.uint8))
+                #        image.save('./train/pred/'+str(k)+'.png')
+                #        tmp += 1
+                #    div += 1
+                #avg_valid_loss = vlos/valid_batches
+                #print('Avg validation loss: {:.3f}'.format(avg_valid_loss))
+                #valid = evaluate('./train/pred/', './train/normal/', './train/mask/')
+                #print(valid)
+                #if valid < min_loss_so_far:
+                #    min_loss_so_far = valid
+                tf.train.Saver().save(sess, './best_model/surface_normal_est')
+                print('best model saved!\n')
+                lr *= 0.5
+                print('Now change learning_rate to', sess.run(lr))
+
